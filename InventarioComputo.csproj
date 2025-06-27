@@ -14,7 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="Pages\Mantenimientos\FormularioMantenimiento.cshtml" />
     <Content Remove="Pages\Sucursales.cshtml" />
   </ItemGroup>
 
@@ -24,7 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Pages\Mantenimientos\FormularioMantenimiento.cshtml" />
     <None Include="Pages\Sucursales\Index.cshtml" />
     <None Include="wwwroot\css\.DS_Store" />
     <None Include="wwwroot\Styles\Style_Index.css" />

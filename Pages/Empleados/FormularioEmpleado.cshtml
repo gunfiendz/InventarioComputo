@@ -1,0 +1,84 @@
+﻿@page "{handler?}/{id:int?}"
+@model InventarioComputo.Pages.Empleados.FormularioEmpleadoModel
+@{
+    ViewData["Title"] = Model.Modo == "Crear" ? "Nuevo Empleado" :
+                        Model.Modo == "Editar" ? "Editar Empleado" : "Ver Empleado";
+    Layout = "_LayoutGeneral";
+
+    bool esModoLectura = Model.Modo == "Ver";
+}
+
+<div class="container-form">
+    <h1 class="beige-text"><i class="fas fa-user"></i> @ViewData["Title"]</h1>
+
+    <form method="post" class="form-beige">
+        <input type="hidden" asp-for="Empleado.Id" />
+
+        <div class="form-group">
+            <label asp-for="Empleado.Nombre" class="form-label"></label>
+            <input asp-for="Empleado.Nombre" class="form-control" readonly="@esModoLectura" />
+            <span asp-validation-for="Empleado.Nombre" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Empleado.IdPuesto" class="form-label">Puesto</label>
+            <select asp-for="Empleado.IdPuesto" class="form-control input-beige" disabled="@esModoLectura">
+                <option value="">-- Seleccione un puesto --</option>
+                @foreach (var puesto in Model.Puestos)
+                {
+                    <option value="@puesto.Id"
+                            selected="@(puesto.Id == Model.Empleado?.IdPuesto)">
+                        @puesto.Nombre
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="Empleado.IdPuesto" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Empleado.IdDepartamento" class="form-label">Departamento</label>
+            <select asp-for="Empleado.IdDepartamento" class="form-control input-beige" disabled="@esModoLectura">
+                <option value="">-- Seleccione un departamento --</option>
+                @foreach (var depto in Model.Departamentos)
+                {
+                    <option value="@depto.Id"
+                            selected="@(depto.Id == Model.Empleado?.IdDepartamento)">
+                        @depto.Nombre
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="Empleado.IdDepartamento" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Empleado.Email" class="form-label"></label>
+            <input asp-for="Empleado.Email" class="form-control" readonly="@esModoLectura" />
+            <span asp-validation-for="Empleado.Email" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Empleado.Telefono" class="form-label"></label>
+            <input asp-for="Empleado.Telefono" class="form-control" readonly="@esModoLectura" />
+            <span asp-validation-for="Empleado.Telefono" class="text-danger"></span>
+        </div>
+
+        @if (!esModoLectura)
+        {
+            <div class="form-actions">
+                <button type="submit" class="btn btn-beige">Guardar</button>
+                <a href="/Empleados" class="btn btn-cancelar">Cancelar</a>
+            </div>
+        }
+        else
+        {
+            <div class="form-actions">
+                <a href="/Empleados/Editar/@Model.Empleado.Id" class="btn btn-beige">Editar</a>
+                <a href="/Empleados" class="btn btn-cancelar">Volver</a>
+            </div>
+        }
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

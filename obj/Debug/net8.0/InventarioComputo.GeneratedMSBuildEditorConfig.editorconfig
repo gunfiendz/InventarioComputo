@@ -18,6 +18,10 @@ build_property.GenerateRazorMetadataSourceChecksumAttributes =
 build_property.MSBuildProjectDirectory = C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo
 build_property._RazorSourceGeneratorDebug = 
 
+[C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Empleados/FormularioEmpleado.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRW1wbGVhZG9zXEZvcm11bGFyaW9FbXBsZWFkby5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Empleados/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRW1wbGVhZG9zXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -72,6 +76,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Sucursales/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU3VjdXJzYWxlc1xJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Usuarios/FormularioUsuario.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXN1YXJpb3NcRm9ybXVsYXJpb1VzdWFyaW8uY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Usuarios/Index.cshtml]

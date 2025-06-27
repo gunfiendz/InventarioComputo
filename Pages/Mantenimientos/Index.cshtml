@@ -8,7 +8,7 @@
 <div class="inventario-container">
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-tools"></i> @ViewData["Title"]</h1>
-        <a href="/Mantenimientos/PruebaFormulario" class="btn btn-beige">
+        <a href="/Mantenimientos/FormularioMantenimiento" class="btn btn-beige">
             <i class="fas fa-plus"></i> Nuevo Mantenimiento
         </a>
     </div>
@@ -152,7 +152,7 @@
                         <td>@mantenimiento.Descripcion</td>
                         <td>@mantenimiento.Tecnico</td>
                         <td class="acciones">
-                            <a asp-page="EditarMantenimiento" asp-route-id="@mantenimiento.Id" class="btn btn-action" title="Editar">
+                            <a href="/Mantenimientos/PruebaFormulario/Editar/@mantenimiento.Id" class="btn btn-action">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <button class="btn btn-action btn-eliminar"
