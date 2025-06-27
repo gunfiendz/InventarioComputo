@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="NewFolder1\**" />
+    <Content Remove="NewFolder1\**" />
+    <EmbeddedResource Remove="NewFolder1\**" />
+    <None Remove="NewFolder1\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Pages\Mantenimientos\FormularioMantenimiento.cshtml" />
+    <Content Remove="Pages\Sucursales.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Pages\Sucursales.cshtml" />
+    <_ContentIncludedByDefault Remove="wwwroot\Styles\Style_LayoutDashboard.css" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Pages\Mantenimientos\FormularioMantenimiento.cshtml" />
+    <None Include="Pages\Sucursales\Index.cshtml" />
+    <None Include="wwwroot\css\.DS_Store" />
+    <None Include="wwwroot\Styles\Style_Index.css" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\Scripts\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EntityFramework" Version="6.5.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Pages\Sucursales.cshtml" />
+  </ItemGroup>
+
+</Project>

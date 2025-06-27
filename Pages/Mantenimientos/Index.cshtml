@@ -1,0 +1,296 @@
+﻿@page
+@model InventarioComputo.Pages.Mantenimientos.MantenimientosModel
+@{
+    ViewData["Title"] = "Gestión de Mantenimientos";
+    Layout = "_LayoutGeneral";
+}
+
+<div class="inventario-container">
+    <div class="inventario-header">
+        <h1 class="beige-text"><i class="fas fa-tools"></i> @ViewData["Title"]</h1>
+        <a href="/Mantenimientos/PruebaFormulario" class="btn btn-beige">
+            <i class="fas fa-plus"></i> Nuevo Mantenimiento
+        </a>
+    </div>
+
+    <div class="filtros-container beige-bg">
+        <div class="filtros-group">
+            <div class="filtro-item">
+                <label class="form-label beige-text">Tipo de Mantenimiento:</label>
+                <select id="filtro-tipo" class="form-select input-beige">
+                    <option value="">Todos</option>
+                    @foreach (var tipo in Model.TiposMantenimiento)
+                    {
+                        <option value="@tipo.Id" selected="@(tipo.Id.ToString() == Model.TipoFilter)">@tipo.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Equipo:</label>
+                <select id="filtro-equipo" class="form-select input-beige">
+                    <option value="">Todos</option>
+                    @foreach (var equipo in Model.Equipos)
+                    {
+                        <option value="@equipo.Id" selected="@(equipo.Id.ToString() == Model.EquipoFilter)">@equipo.EtiquetaInv - @equipo.NumeroSerie</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Técnico:</label>
+                <select id="filtro-tecnico" class="form-select input-beige">
+                    <option value="">Todos</option>
+                    @foreach (var empleado in Model.Empleados)
+                    {
+                        <option value="@empleado.Id" selected="@(empleado.Id.ToString() == Model.TecnicoFilter)">@empleado.Nombre</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="filtros-group">
+            <div class="filtro-item">
+                <label class="form-label beige-text">Fecha Inicio:</label>
+                <input type="date" id="filtro-fechainicio" class="form-control input-beige" value="@Model.FechaInicioFilter">
+            </div>
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Fecha Fin:</label>
+                <input type="date" id="filtro-fechafin" class="form-control input-beige" value="@Model.FechaFinFilter">
+            </div>
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Buscar:</label>
+                <input type="text" id="filtro-busqueda" class="form-control input-beige" placeholder="Descripción..." value="@Model.BusquedaFilter">
+            </div>
+        </div>
+        <button id="btn-aplicar-filtros" class="btn btn-beige-sm">
+            <i class="fas fa-filter"></i> Aplicar Filtros
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-beige sortable-table">
+            <thead>
+                <tr>
+                    <th data-sort-column="Fecha">
+                        <a href="#" class="sort-link">
+                            Fecha
+                            @if (Model.SortColumn == "Fecha")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Tipo">
+                        <a href="#" class="sort-link">
+                            Tipo
+                            @if (Model.SortColumn == "Tipo")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Equipo">
+                        <a href="#" class="sort-link">
+                            Equipo
+                            @if (Model.SortColumn == "Equipo")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Descripcion">
+                        <a href="#" class="sort-link">
+                            Descripción
+                            @if (Model.SortColumn == "Descripcion")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Tecnico">
+                        <a href="#" class="sort-link">
+                            Técnico
+                            @if (Model.SortColumn == "Tecnico")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var mantenimiento in Model.Mantenimientos)
+                {
+                    <tr>
+                        <td>@mantenimiento.Fecha.ToShortDateString()</td>
+                        <td>@mantenimiento.Tipo</td>
+                        <td>@mantenimiento.Equipo</td>
+                        <td>@mantenimiento.Descripcion</td>
+                        <td>@mantenimiento.Tecnico</td>
+                        <td class="acciones">
+                            <a asp-page="EditarMantenimiento" asp-route-id="@mantenimiento.Id" class="btn btn-action" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-action btn-eliminar"
+                                    data-id="@mantenimiento.Id"
+                                    data-descripcion="@mantenimiento.Descripcion"
+                                    title="Eliminar">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="paginacion">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                @for (int i = 1; i <= Model.TotalPaginas; i++)
+                {
+                    var url = $"/Mantenimientos?pagina={i}" +
+                    $"&sortColumn={Model.SortColumn}" +
+                    $"&sortDirection={Model.SortDirection}" +
+                    $"&tipo={Model.TipoFilter}" +
+                    $"&equipo={Model.EquipoFilter}" +
+                    $"&tecnico={Model.TecnicoFilter}" +
+                    $"&fechainicio={Model.FechaInicioFilter}" +
+                    $"&fechafin={Model.FechaFinFilter}" +
+                    $"&busqueda={Model.BusquedaFilter}";
+
+                    <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
+                        <a class="page-link" href="@url">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header beige-bg">
+                <h5 class="modal-title beige-text">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                ¿Está seguro que desea eliminar el mantenimiento: <strong id="descripcionMantenimientoEliminar"></strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btn-confirmar-eliminar">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/Styles/Style_Inventario.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    <script>
+        // Ordenamiento
+        document.querySelectorAll('.sort-link').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const column = this.closest('th').dataset.sortColumn;
+                const currentOrder = '@Model.SortDirection';
+                const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+
+                const url = new URL(window.location.href);
+                url.searchParams.set('sortColumn', column);
+                url.searchParams.set('sortDirection', newOrder);
+                url.searchParams.set('pagina', '1');
+
+                window.location.href = url.toString();
+            });
+        });
+
+        // Eliminación
+        let mantenimientoAEliminar = null;
+        document.querySelectorAll('.btn-eliminar').forEach(btn => {
+            btn.addEventListener('click', function () {
+                mantenimientoAEliminar = {
+                    id: this.getAttribute('data-id'),
+                    descripcion: this.getAttribute('data-descripcion')
+                };
+
+                document.getElementById('descripcionMantenimientoEliminar').textContent = mantenimientoAEliminar.descripcion;
+                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+                modal.show();
+            });
+        });
+
+        document.getElementById('btn-confirmar-eliminar').addEventListener('click', function () {
+            if (mantenimientoAEliminar) {
+                fetch(`/Mantenimientos/Eliminar/${mantenimientoAEliminar.id}`, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value,
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Error al eliminar el mantenimiento');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar el mantenimiento');
+                });
+            }
+        });
+
+        // Aplicar filtros
+        document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
+            const tipo = document.getElementById('filtro-tipo').value;
+            const equipo = document.getElementById('filtro-equipo').value;
+            const tecnico = document.getElementById('filtro-tecnico').value;
+            const fechaInicio = document.getElementById('filtro-fechainicio').value;
+            const fechaFin = document.getElementById('filtro-fechafin').value;
+            const busqueda = document.getElementById('filtro-busqueda').value;
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('pagina', '1');
+            url.searchParams.set('sortColumn', '@Model.SortColumn');
+            url.searchParams.set('sortDirection', '@Model.SortDirection');
+            if (tipo) url.searchParams.set('tipo', tipo);
+            if (equipo) url.searchParams.set('equipo', equipo);
+            if (tecnico) url.searchParams.set('tecnico', tecnico);
+            if (fechaInicio) url.searchParams.set('fechainicio', fechaInicio);
+            if (fechaFin) url.searchParams.set('fechafin', fechaFin);
+            if (busqueda) url.searchParams.set('busqueda', busqueda);
+
+            window.location.href = url.toString();
+        });
+    </script>
+}

@@ -1,0 +1,157 @@
+﻿@page
+@model PrincipalModel
+@{
+    ViewData["Title"] = "Dashboard Principal";
+    Layout = "_LayoutDashboard";
+}
+
+<div class="dashboard-container">
+    <!-- Header con bienvenida -->
+    <div class="dashboard-bienvenida">
+        <h1 class="beige-text">Bienvenido/a, <span id="username-display">@Model.NombreUsuario</span></h1>
+        <p class="beige-light">Sistema de Inventario de Computo - La Armería</p>
+        <p class="beige-light">Rol: @Model.RolUsuario</p>
+    </div>
+
+    <div class="quick-access">
+        <h3 class="beige-text">Accesos Rápidos</h3>
+        <div class="quick-links">
+            @if (Model.RolUsuario == "Técnico")
+            {
+                <a href="/Inventario/Formulario" class="quick-link beige-dark">
+                    <i class="fas fa-laptop"></i>
+                    <span>Nuevo Equipo</span>
+                </a>
+            }
+
+            @if (Model.RolUsuario == "Técnico")
+            {
+                <a href="/Asignaciones" class="quick-link beige-dark">
+                    <i class="fas fa-user-tie"></i>
+                    <span>Asignar Equipo</span>
+                </a>
+            }
+
+            @if (Model.RolUsuario == "Administrador")
+            {
+                <a href="/Inventario" class="quick-link beige-dark">
+                    <i class="fas fa-users-cog"></i>
+                    <span>Agregar Nuevo Activo Fijo</span>
+                </a>
+            }
+
+            <a href="/Reportes" class="quick-link beige-dark">
+                <i class="fas fa-chart-bar"></i>
+                <span>Generar Reporte Inventario</span>
+            </a>
+
+            @if (Model.RolUsuario == "Usuario")
+            {
+                <a href="/Reportes" class="quick-link beige-dark">
+                    <i class="fas fa-users-cog"></i>
+                    <span>Generar Reporte Sucursales</span>
+                </a>
+            }
+            @if (Model.RolUsuario == "Usuario")
+            {
+                <a href="/Usuarios" class="quick-link beige-dark">
+                    <i class="fas fa-users-cog"></i>
+                    <span>Generar Reporte Mantenimientos</span>
+                </a>
+            }
+            @if (Model.RolUsuario == "Usuario")
+            {
+                <a href="/Usuarios" class="quick-link beige-dark">
+                    <i class="fas fa-users-cog"></i>
+                    <span>Generar Reporte Activos Fijos</span>
+                </a>
+            }
+
+            @if (Model.RolUsuario == "Administrador")
+            {
+                <a href="/Usuarios" class="quick-link beige-dark">
+                    <i class="fas fa-users-cog"></i>
+                    <span>Agregar Usuario</span>
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- Tarjetas de resumen -->
+    <h3 class="beige-text">Acciones</h3>
+    <div class="summary-cards">
+        <div class="card beige-card">
+            <div class="card-body">
+                <h5 class="card-title">Activos Fijos</h5>
+                <p class="card-value">1,248</p>
+                <a href="/Inventario" class="btn btn-beige-sm">Gestionar</a>
+            </div>
+        </div>
+
+        <div class="card beige-card">
+            <div class="card-body">
+                <h5 class="card-title">Mantenimientos</h5>
+                <p class="card-value">24</p>
+                <a href="/Mantenimientos" class="btn btn-beige-sm">Gestionar</a>
+            </div>
+        </div>
+
+        @if (Model.RolUsuario == "Administrador")
+        {
+            <div class="card beige-card">
+                <div class="card-body">
+                    <h5 class="card-title">Empleados</h5>
+                    <p class="card-value">3</p>
+                    <a href="/Empleados" class="btn btn-beige-sm">Gestionar</a>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="summary-cards">
+        <div class="card beige-card">
+            <div class="card-body">
+                <h5 class="card-title">Equipos Registrados</h5>
+                <p class="card-value">7</p>
+                <a href="/EquiposRegistrados" class="btn btn-beige-sm">Gestionar</a>
+            </div>
+        </div>
+
+        <div class="card beige-card">
+            <div class="card-body">
+                <h5 class="card-title">Sucursales</h5>
+                <p class="card-value">18</p>
+                <a href="/Sucursales" class="btn btn-beige-sm">Gestionar</a>
+            </div>
+        </div>
+
+        @if (Model.RolUsuario == "Administrador")
+        {
+
+            <div class="card beige-card">
+                <div class="card-body">
+                    <h5 class="card-title">Usuarios</h5>
+                    <p class="card-value">4</p>
+                    <a href="/Usuarios" class="btn btn-beige-sm">Gestionar</a>
+                </div>
+            </div>
+        }
+
+        
+    </div>
+
+    
+
+        <div class="chart-container beige-bg">
+            <h4 class="beige-text">Equipos por Sucursal</h4>
+            <div class="chart-placeholder">
+                <p>Gráfico interactivo será implementado aquí</p>
+            </div>
+        </div>
+    
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/Styles/Style_Principal.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+}

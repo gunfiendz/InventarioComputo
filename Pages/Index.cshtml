@@ -1,0 +1,74 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Login";
+    Layout = "_LayoutLogin"; 
+}
+
+<div class="login-logo">
+    <img src="~/images/Logo_LaArmeria.png" alt="Logo de La Armería" class="logo-img">
+</div>
+
+<div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center beige-bg">
+    <div class="form-container beige-dark">
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @Model.ErrorMessage
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <form method="post">
+            <div class="text-center mb-4">
+                <h2 class="beige-text">Bienvenido/a al Sistema</h2>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label beige-text">Usuario:</label>
+                <input asp-for="Username" class="form-control input-beige" maxlength="30" placeholder="Nombre de Usuario" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+            <div class="mb-3 password-container">
+                <label asp-for="Password" class="form-label beige-text">Password:</label>
+                <input asp-for="Password" class="form-control input-beige" type="password" maxlength="30" placeholder="Password" id="txt_contrasena" />
+                <button type="button" class="reveal-button" onclick="togglePasswordVisibility()">👁️</button>
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-beige">Ingresar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById("txt_contrasena");
+        const revealButton = document.querySelector(".reveal-button");
+        const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+        passwordInput.setAttribute("type", type);
+        revealButton.classList.toggle("pressed");
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const inputUsuario = document.getElementById("Username");
+        const inputContra = document.getElementById("txt_contrasena");
+
+        if (inputUsuario) {
+            inputUsuario.addEventListener("input", function () {
+                if (!Validaciones.Usuario(this.value)) {
+                    this.value = this.value.substring(0, this.value.length - 1);
+                }
+            });
+        }
+
+        if (inputContra) {
+            inputContra.addEventListener("input", function () {
+                if (!Validaciones.Contrasena(this.value)) {
+                    this.value = this.value.substring(0, this.value.length - 1);
+                }
+            });
+        }
+    });
+</script>

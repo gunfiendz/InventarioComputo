@@ -1,0 +1,308 @@
+﻿@page
+@model InventarioComputo.Pages.Inventario.InventarioModel
+@{
+    ViewData["Title"] = "Inventario Activos Fijos";
+    Layout = "_LayoutGeneral";
+}
+
+<div class="inventario-container">
+    <div class="inventario-header">
+        <h1 class="beige-text"><i class="fas fa-laptop"></i> Inventario de Equipos</h1>
+        @if (Model.RolUsuario != "Usuario")
+        {
+            <a href="/Inventario/Formulario" class="btn btn-beige">
+                <i class="fas fa-plus"></i> Agregar Varios Equipos
+            </a>
+
+            <a href="/Inventario/Formulario" class="btn btn-beige">
+                <i class="fas fa-plus"></i> Nuevo Equipo
+            </a>
+        }
+    </div>
+
+    <div class="filtros-container beige-bg">
+        <div class="filtros-group">
+            <div class="filtro-item">
+                <label for="filtro-tipoequipo" class="form-label beige-text">Tipo de Equipo:</label>
+                <select id="filtro-tipoequipo" class="form-select input-beige">
+                    <option value="">Todos</option>
+                    @foreach (var item in Model.TiposEquipos)
+                    {
+                        <option value="@item.id_tipoequipo"
+                                selected="@(item.id_tipoequipo.ToString() == Model.TipoEquipoFilter)">
+                            @item.NombreTipoEquipo
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="filtro-item">
+                <label for="filtro-marca" class="form-label beige-text">Marca:</label>
+                <select id="filtro-marca" class="form-select input-beige">
+                    <option value="">Todas</option>
+                    @foreach (var item in Model.Marcas)
+                    {
+                        <option value="@item.id_marca"
+                                selected="@(item.id_marca.ToString() == Model.MarcaFilter)">
+                            @item.NombreMarca
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="filtro-item">
+                <label for="filtro-sucursal" class="form-label beige-text">Sucursal:</label>
+                <select id="filtro-sucursal" class="form-select input-beige">
+                    <option value="">Todas</option>
+                    @foreach (var item in Model.Sucursales)
+                    {
+                        <option value="@item.id_sucursal"
+                                selected="@(item.id_sucursal.ToString() == Model.SucursalFilter)">
+                            @item.Nombre
+                        </option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="filtros-container beige-bg">
+        <div class="filtros-group">
+            <div class="filtro-item">
+                <label for="filtro-estado" class="form-label beige-text">Estado:</label>
+                <select id="filtro-estado" class="form-select input-beige">
+                    <option value="">Todos</option>
+                    @foreach (var item in Model.Estados)
+                    {
+                        <option value="@item.id_estado"
+                                selected="@(item.id_estado.ToString() == Model.EstadoFilter)">
+                            @item.EstadoActual
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="filtro-item">
+                <label for="filtro-empleado" class="form-label beige-text">Asignado a:</label>
+                <select id="filtro-empleado" class="form-select input-beige">
+                    <option value="">Cualquiera</option>
+                    @foreach (var item in Model.Empleados)
+                    {
+                        <option value="@item.id_empleado"
+                                selected="@(item.id_empleado.ToString() == Model.EmpleadoFilter)">
+                            @item.NombreEmpleado
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="filtro-item">
+                <label for="filtro-busqueda" class="form-label beige-text">Buscar:</label>
+                <input type="text" id="filtro-busqueda" class="form-control input-beige"
+                       placeholder="N° Serie, Etiqueta..."
+                       value="@Model.BusquedaFilter">
+            </div>
+        </div>
+        <button id="btn-aplicar-filtros" class="btn btn-beige-sm">
+            <i class="fas fa-filter"></i> Aplicar Filtros
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-beige sortable-table">
+            <thead>
+                <tr>
+                    <th data-sort-column="EtiquetaInv">
+                        <a href="#" class="sort-link">
+                            Etiqueta
+                            @if (Model.SortColumn == "EtiquetaInv")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="NumeroSerie">
+                        <a href="#" class="sort-link">
+                            N° Serie
+                            @if (Model.SortColumn == "NumeroSerie")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="TipoEquipo">
+                        <a href="#" class="sort-link">
+                            Tipo
+                            @if (Model.SortColumn == "TipoEquipo")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Marca">
+                        <a href="#" class="sort-link">
+                            Marca/Modelo
+                            @if (Model.SortColumn == "Marca")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Sucursal">
+                        <a href="#" class="sort-link">
+                            Sucursal
+                            @if (Model.SortColumn == "Sucursal")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Estado">
+                        <a href="#" class="sort-link">
+                            Estado
+                            @if (Model.SortColumn == "Estado")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="AsignadoA">
+                        <a href="#" class="sort-link">
+                            Asignado a
+                            @if (Model.SortColumn == "AsignadoA")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var equipo in Model.Equipos)
+                {
+                    <tr>
+                        <td>@equipo.EtiquetaInv</td>
+                        <td>@equipo.NumeroSerie</td>
+                        <td>@equipo.TipoEquipo</td>
+                        <td>@equipo.Marca - @equipo.Modelo</td>
+                        <td>@equipo.Sucursal</td>
+                        <td>
+                            <span class="badge estado-@equipo.Estado.ToLower()">@equipo.Estado</span>
+                        </td>
+                        <td>@(equipo.AsignadoA ?? "No asignado")</td>
+                        <td class="acciones">
+                            @if (Model.RolUsuario == "Usuario")
+                            {
+                                <a href="/Inventario/Formulario/Ver/@equipo.id_activofijo" class="btn btn-action">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            }
+                            @if (Model.RolUsuario != "Usuario")
+                            {
+                                <a href="/Inventario/Formulario/Editar/@equipo.id_activofijo" class="btn btn-action">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                            }
+                            @if (Model.RolUsuario != "Usuario")
+                            {
+                                <button class="btn btn-action btn-mantenimiento"
+                                        data-id="@equipo.id_activofijo"
+                                        title="Registrar mantenimiento">
+                                    <i class="fas fa-tools"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="paginacion">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                @for (int i = 1; i <= Model.TotalPaginas; i++)
+                {
+                    var url = $"/Inventario?pagina={i}" +
+                    $"&sortColumn={Model.SortColumn}" +
+                    $"&sortDirection={Model.SortDirection}" +
+                    $"&tipoequipo={Model.TipoEquipoFilter}" +
+                    $"&marca={Model.MarcaFilter}" +
+                    $"&sucursal={Model.SucursalFilter}" +
+                    $"&estado={Model.EstadoFilter}" +
+                    $"&empleado={Model.EmpleadoFilter}" +
+                    $"&busqueda={Model.BusquedaFilter}";
+
+                    <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
+                        <a class="page-link" href="@url">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/Styles/Style_Inventario.css" asp-append-version="true" />
+    <style>
+        .sort-link {
+            color: inherit;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+            .sort-link:hover {
+                color: #6c757d;
+            }
+
+        .fa-sort, .fa-sort-up, .fa-sort-down {
+            font-size: 0.8em;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="~/js/Script_Tablas.js" asp-append-version="true"></script>
+    <script>
+        // Mantenimientos
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.btn-mantenimiento').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const idEquipo = this.getAttribute('data-id');
+                    window.location.href = `/Mantenimientos/Nuevo?idEquipo=${idEquipo}`;
+                });
+            });
+        });
+    </script>
+}
