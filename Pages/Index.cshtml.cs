@@ -41,10 +41,9 @@ public class IndexModel : PageModel
         {
             using (var connection = await _dbConnection.GetConnectionAsync())
             {
-                var query = @"SELECT u.id_usuario, u.Username, u.Password, r.NombreRol 
+                var query = @"SELECT u.id_usuario, u.Username, u.Password, rs.NombreRol 
                             FROM Usuarios u
-                            INNER JOIN EmpleadosEquipos ee ON u.id_empleado = ee.id_empleado
-                            INNER JOIN Roles r ON ee.id_rol = r.id_rol
+                            INNER JOIN RolesSistema rs ON u.id_rol_sistema = rs.id_rol_sistema
                             WHERE u.Username = @Username AND u.Password = @Password";
 
                 var command = new SqlCommand(query, connection);

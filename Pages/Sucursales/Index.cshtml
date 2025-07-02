@@ -13,7 +13,6 @@
         </a>
     </div>
 
-    <!-- Filtros con estructura idéntica a Inventario -->
     <div class="filtros-container beige-bg">
         <div class="filtros-group">
             <div class="filtro-item">
@@ -57,7 +56,6 @@
         </button>
     </div>
 
-    <!-- Tabla con clases idénticas a Inventario -->
     <div class="table-responsive">
         <table class="table table-hover table-beige sortable-table">
             <thead>
@@ -156,7 +154,6 @@
         </table>
     </div>
 
-    <!-- Paginación idéntica a Inventario -->
     <div class="paginacion">
         <nav aria-label="Page navigation">
             <ul class="pagination">
@@ -178,7 +175,6 @@
     </div>
 </div>
 
-<!-- Modal de confirmación con estilos idénticos -->
 <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -198,13 +194,11 @@
 </div>
 
 @section Styles {
-    <!-- Usar mismo archivo CSS que Inventario -->
     <link rel="stylesheet" href="~/Styles/Style_Inventario.css" asp-append-version="true" />
 }
 
 @section Scripts {
     <script>
-        // Ordenamiento de columnas (idéntico a Inventario)
         document.querySelectorAll('.sort-link').forEach(link => {
             link.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -212,7 +206,6 @@
                 const currentOrder = '@Model.SortDirection';
                 const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
 
-                // Mantener filtros en la URL
                 const url = new URL(window.location.href);
                 url.searchParams.set('sortColumn', column);
                 url.searchParams.set('sortDirection', newOrder);
@@ -222,7 +215,6 @@
             });
         });
 
-        // Eliminación (idéntico a Inventario)
         let sucursalAEliminar = null;
         document.querySelectorAll('.btn-eliminar').forEach(btn => {
             btn.addEventListener('click', function () {
@@ -258,7 +250,6 @@
             }
         });
 
-        // Aplicar filtros (idéntico a Inventario)
         document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
             const departamento = document.getElementById('filtro-departamento').value;
             const ciudad = document.getElementById('filtro-ciudad').value;
@@ -275,7 +266,6 @@
             window.location.href = url.toString();
         });
 
-        // Cargar ciudades cuando cambia departamento
         document.getElementById('filtro-departamento').addEventListener('change', function () {
             const departamentoId = this.value;
             const ciudadSelect = document.getElementById('filtro-ciudad');

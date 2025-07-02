@@ -1,0 +1,90 @@
+﻿@page "{handler?}/{id:int?}"
+@model InventarioComputo.Pages.Usuarios.PermisosUsuarioModel
+@{
+    ViewData["Title"] = "Permisos de Usuario";
+    Layout = "_LayoutGeneral";
+}
+
+<div class="container-form">
+    <h1 class="beige-text"><i class="fas fa-user-lock"></i> @ViewData["Title"]</h1>
+    <h4>Usuario: @Model.Username</h4>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-success">@TempData["Mensaje"]</div>
+    }
+
+    <form method="post" class="form-beige">
+        <input type="hidden" asp-for="Permisos.IdPermiso" />
+        <input type="hidden" asp-for="Permisos.IdUsuario" />
+
+        <div class="form-group">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="Permisos.VerInformes">
+                <label class="form-check-label" asp-for="Permisos.VerInformes"></label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="Permisos.ModificarActivos">
+                <label class="form-check-label" asp-for="Permisos.ModificarActivos"></label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="Permisos.ModificarUsuarios">
+                <label class="form-check-label" asp-for="Permisos.ModificarUsuarios"></label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="Permisos.RealizarMantenimientos">
+                <label class="form-check-label" asp-for="Permisos.RealizarMantenimientos"></label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="Permisos.AccesoTotal">
+                <label class="form-check-label" asp-for="Permisos.AccesoTotal"></label>
+                <small class="form-text text-muted">(Este permiso otorga todos los demás permisos)</small>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-beige">Guardar</button>
+            <a href="/Usuarios" class="btn btn-cancelar">Volver</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // Si AccesoTotal está marcado, marcar todos los demás
+        document.getElementById('Permisos_AccesoTotal').addEventListener('change', function () {
+            if (this.checked) {
+                document.querySelectorAll('.form-check-input:not(#Permisos_AccesoTotal)').forEach(checkbox => {
+                    checkbox.checked = true;
+                    checkbox.disabled = true;
+                });
+            } else {
+                document.querySelectorAll('.form-check-input:not(#Permisos_AccesoTotal)').forEach(checkbox => {
+                    checkbox.disabled = false;
+                });
+            }
+        });
+
+        // Inicializar estado al cargar la página
+        document.addEventListener('DOMContentLoaded', function () {
+            const accesoTotal = document.getElementById('Permisos_AccesoTotal');
+            if (accesoTotal.checked) {
+                document.querySelectorAll('.form-check-input:not(#Permisos_AccesoTotal)').forEach(checkbox => {
+                    checkbox.disabled = true;
+                });
+            }
+        });
+    </script>
+}

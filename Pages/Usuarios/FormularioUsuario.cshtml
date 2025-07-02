@@ -1,4 +1,118 @@
-﻿@page
+﻿@page "{handler?}/{id:int?}"
 @model InventarioComputo.Pages.Usuarios.FormularioUsuarioModel
 @{
+    ViewData["Title"] = Model.Modo == "Crear" ? "Nuevo Usuario" :
+                        Model.Modo == "Editar" ? "Editar Usuario" : "Ver Usuario";
+    Layout = "_LayoutGeneral";
+
+    bool esModoLectura = Model.Modo == "Ver";
+    bool mostrarCamposPassword = Model.Modo == "Crear";
+}
+
+<div class="container-form">
+    <h1 class="beige-text"><i class="fas fa-user-circle"></i> @ViewData["Title"]</h1>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-success">@TempData["Mensaje"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <form method="post" class="form-beige">
+        <input type="hidden" asp-for="Usuario.Id" />
+
+        <div class="form-group">
+            <label asp-for="Usuario.Username" class="form-label"></label>
+            <input asp-for="Usuario.Username" class="form-control" readonly="@esModoLectura" />
+            <span asp-validation-for="Usuario.Username" class="text-danger"></span>
+        </div>
+
+        @if (mostrarCamposPassword)
+        {
+            <div class="form-group">
+                <label asp-for="Usuario.Password" class="form-label"></label>
+                <input asp-for="Usuario.Password" type="password" class="form-control" readonly="@esModoLectura" />
+                <span asp-validation-for="Usuario.Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Usuario.ConfirmPassword" class="form-label">Confirmar Contraseña</label>
+                <input asp-for="Usuario.ConfirmPassword" type="password" class="form-control" readonly="@esModoLectura" />
+                <span asp-validation-for="Usuario.ConfirmPassword" class="text-danger"></span>
+            </div>
+        }
+
+        <div class="form-group">
+            <label asp-for="Usuario.IdEmpleado" class="form-label">Empleado</label>
+            <select asp-for="Usuario.IdEmpleado" class="form-control input-beige"
+                    disabled="@(esModoLectura || Model.Modo == "Editar")">
+                <option value="">-- Seleccione un empleado --</option>
+                @foreach (var empleado in Model.Empleados)
+                {
+                    <option value="@empleado.Id"
+                            selected="@(empleado.Id == Model.Usuario?.IdEmpleado)">
+                        @empleado.Nombre
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="Usuario.IdEmpleado" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Usuario.IdRolSistema" class="form-label">Rol</label>
+            <select asp-for="Usuario.IdRolSistema" class="form-control input-beige" disabled="@esModoLectura">
+                <option value="">-- Seleccione un rol --</option>
+                @foreach (var rol in Model.Roles)
+                {
+                    <option value="@rol.Id"
+                            selected="@(rol.Id == Model.Usuario?.IdRolSistema)">
+                        @rol.Nombre
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="Usuario.IdRolSistema" class="text-danger"></span>
+        </div>
+
+        @if (Model.Modo != "Crear")
+        {
+            <div class="form-group">
+                <label class="form-label">Último cambio de contraseña</label>
+                <input type="text" class="form-control" value="@Model.Usuario.FechaPassword.ToString("g")" readonly>
+            </div>
+        }
+
+        @if (!esModoLectura)
+        {
+            <div class="form-actions">
+                <button type="submit" class="btn btn-beige">Guardar</button>
+                <a href="/Usuarios" class="btn btn-cancelar">Cancelar</a>
+            </div>
+        }
+        else
+        {
+            <div class="form-actions">
+                <a href="/Usuarios/Editar/@Model.Usuario.Id" class="btn btn-beige">Editar</a>
+                <a href="/Usuarios" class="btn btn-cancelar">Volver</a>
+            </div>
+        }
+    </form>
+
+    @if (Model.Modo == "Editar" && !esModoLectura)
+    {
+        <form method="post" asp-page-handler="Restablecer" asp-route-id="@Model.Usuario.Id" class="mt-3">
+            <div class="form-group">
+                <button type="submit" class="btn btn-restablecer">
+                    Restablecer Contraseña
+                </button>
+                <span class="text-muted">(Establecerá: Armeria2025!)</span>
+            </div>
+        </form>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
 }

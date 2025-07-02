@@ -76,6 +76,7 @@ C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\InventarioComputo.MvcApplicationPartsAssemblyInfo.cache
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\InventarioComputo.RazorAssemblyInfo.cache
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\InventarioComputo.RazorAssemblyInfo.cs
+C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\InventarioComputo.sourcelink.json
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\staticwebassets.development.json
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\staticwebassets\msbuild.InventarioComputo.Microsoft.AspNetCore.StaticWebAssets.props
@@ -93,4 +94,3 @@ C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\InventarioComputo.pdb
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\InventarioComputo.genruntimeconfig.cache
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\ref\InventarioComputo.dll
-C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net8.0\InventarioComputo.sourcelink.json

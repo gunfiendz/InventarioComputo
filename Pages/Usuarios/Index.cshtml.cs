@@ -7,7 +7,7 @@ using System;
 
 namespace InventarioComputo.Pages.Usuarios
 {
-    public class UsuariosModel : PageModel
+    public class IndexModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
 
@@ -23,7 +23,7 @@ namespace InventarioComputo.Pages.Usuarios
         public string EmpleadoFilter { get; set; }
         public string BusquedaFilter { get; set; }
 
-        public UsuariosModel(ConexionBDD dbConnection)
+        public IndexModel(ConexionBDD dbConnection)
         {
             _dbConnection = dbConnection;
         }
@@ -48,7 +48,7 @@ namespace InventarioComputo.Pages.Usuarios
             {
                 {"Usuario", "u.Username"},
                 {"Empleado", "e.Nombre"},
-                {"Rol", "r.NombreRol"}
+                {"Rol", "rs.NombreRol"}
             };
 
             if (!columnasValidas.ContainsKey(SortColumn))
@@ -75,7 +75,7 @@ namespace InventarioComputo.Pages.Usuarios
         private async Task CargarDatosFiltros(SqlConnection connection)
         {
             // Roles
-            var cmdRoles = new SqlCommand("SELECT id_rol, NombreRol FROM Roles", connection);
+            var cmdRoles = new SqlCommand("SELECT id_rol_sistema, NombreRol FROM RolesSistema", connection);
             using (var reader = await cmdRoles.ExecuteReaderAsync())
             {
                 while (await reader.ReadAsync())
@@ -109,29 +109,23 @@ namespace InventarioComputo.Pages.Usuarios
                 SELECT 
                     u.id_usuario,
                     u.Username,
-                    e.Nombre AS Empleado,
-                    r.NombreRol AS Rol,
+                    COALESCE(e.Nombre, 'Sin empleado asociado') AS Empleado,
+                    rs.NombreRol AS Rol,
                     u.FechaPassword AS UltimoAcceso,
                     COUNT(*) OVER() AS TotalRegistros
                 FROM Usuarios u
-                JOIN Empleados e ON u.id_empleado = e.id_empleado
-                JOIN Roles r ON (
-                    SELECT TOP 1 id_rol 
-                    FROM EmpleadosEquipos ee 
-                    WHERE ee.id_empleado = u.id_empleado 
-                    AND ee.ResponsableActual = 1
-                ) = r.id_rol
-                WHERE (@Rol IS NULL OR r.id_rol = @Rol)
-                AND (@Empleado IS NULL OR u.id_empleado = @Empleado)
-                AND (@Busqueda = '' OR u.Username LIKE '%' + @Busqueda + '%' OR e.Nombre LIKE '%' + @Busqueda + '%')
+                LEFT JOIN Empleados e ON u.id_empleado = e.id_empleado
+                INNER JOIN RolesSistema rs ON u.id_rol_sistema = rs.id_rol_sistema
+                WHERE 
+                    (@Rol IS NULL OR u.id_rol_sistema = @Rol)
+                    AND (@Empleado IS NULL OR u.id_empleado = @Empleado)
+                    AND (@Busqueda = '' OR u.Username LIKE '%' + @Busqueda + '%' OR e.Nombre LIKE '%' + @Busqueda + '%')
                 ORDER BY {sortColumn} {SortDirection}
                 OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
             var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@Rol",
-                string.IsNullOrEmpty(RolFilter) ? DBNull.Value : (object)int.Parse(RolFilter));
-            command.Parameters.AddWithValue("@Empleado",
-                string.IsNullOrEmpty(EmpleadoFilter) ? DBNull.Value : (object)int.Parse(EmpleadoFilter));
+            command.Parameters.AddWithValue("@Rol", string.IsNullOrEmpty(RolFilter) ? DBNull.Value : (object)int.Parse(RolFilter));
+            command.Parameters.AddWithValue("@Empleado", string.IsNullOrEmpty(EmpleadoFilter) ? DBNull.Value : (object)int.Parse(EmpleadoFilter));
             command.Parameters.AddWithValue("@Busqueda", BusquedaFilter ?? "");
             command.Parameters.AddWithValue("@Offset", (PaginaActual - 1) * RegistrosPorPagina);
             command.Parameters.AddWithValue("@PageSize", RegistrosPorPagina);
@@ -146,7 +140,7 @@ namespace InventarioComputo.Pages.Usuarios
                         Username = reader.GetString(1),
                         Empleado = reader.GetString(2),
                         Rol = reader.GetString(3),
-                        UltimoAcceso = reader.IsDBNull(4) ? null : (DateTime?)reader.GetDateTime(4)
+                        UltimoAcceso = reader.GetDateTime(4)
                     };
 
                     if (!reader.IsDBNull(5))
@@ -165,7 +159,7 @@ namespace InventarioComputo.Pages.Usuarios
             public string Username { get; set; }
             public string Empleado { get; set; }
             public string Rol { get; set; }
-            public DateTime? UltimoAcceso { get; set; }
+            public DateTime UltimoAcceso { get; set; }
         }
 
         public class Rol

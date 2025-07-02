@@ -15,15 +15,18 @@
 
   <ItemGroup>
     <Content Remove="Pages\Sucursales.cshtml" />
+    <Content Remove="Pages\Usuarios\PermisosUsuario.cshtml" />
   </ItemGroup>
 
   <ItemGroup>
     <_ContentIncludedByDefault Remove="Pages\Sucursales.cshtml" />
+    <_ContentIncludedByDefault Remove="Pages\Usuarios\PermisosUsuario.cshtml" />
     <_ContentIncludedByDefault Remove="wwwroot\Styles\Style_LayoutDashboard.css" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="Pages\Sucursales\Index.cshtml" />
+    <None Include="Pages\Usuarios\PermisosUsuario.cshtml" />
     <None Include="wwwroot\css\.DS_Store" />
     <None Include="wwwroot\Styles\Style_Index.css" />
   </ItemGroup>
@@ -41,6 +44,10 @@
 
   <ItemGroup>
     <UpToDateCheckInput Remove="Pages\Sucursales.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Pages\Usuarios\PermisosUsuario.cshtml" />
   </ItemGroup>
 
 </Project>
