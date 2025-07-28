@@ -51,14 +51,14 @@
             </div>
 
             <div class="filtro-item">
-                <label for="filtro-sucursal" class="form-label beige-text">Sucursal:</label>
-                <select id="filtro-sucursal" class="form-select input-beige">
+                <label for="filtro-departamentoempresa" class="form-label beige-text">Departamento:</label>
+                <select id="filtro-departamentoempresa" class="form-select input-beige">
                     <option value="">Todas</option>
-                    @foreach (var item in Model.Sucursales)
+                    @foreach (var item in Model.DepartamentosEmpresa)
                     {
-                        <option value="@item.id_sucursal"
-                                selected="@(item.id_sucursal.ToString() == Model.SucursalFilter)">
-                            @item.Nombre
+                        <option value="@item.id_DE"
+                                selected="@(item.id_DE.ToString() == Model.DepartamentoEmpresaFilter)">
+                            @item.NombreDepartamento
                         </option>
                     }
                 </select>
@@ -164,10 +164,10 @@
                             }
                         </a>
                     </th>
-                    <th data-sort-column="Sucursal">
+                    <th data-sort-column="DepartamentoEmpresa">
                         <a href="#" class="sort-link">
-                            Sucursal
-                            @if (Model.SortColumn == "Sucursal")
+                            DepartamentoEmpresa
+                            @if (Model.SortColumn == "DepartamentoEmpresa")
                             {
                                 <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
                             }
@@ -214,25 +214,25 @@
                         <td>@equipo.NumeroSerie</td>
                         <td>@equipo.TipoEquipo</td>
                         <td>@equipo.Marca - @equipo.Modelo</td>
-                        <td>@equipo.Sucursal</td>
+                        <td>@equipo.DepartamentoEmpresa</td>
                         <td>
                             <span class="badge estado-@equipo.Estado.ToLower()">@equipo.Estado</span>
                         </td>
                         <td>@(equipo.AsignadoA ?? "No asignado")</td>
                         <td class="acciones">
-                            @if (Model.RolUsuario == "Usuario")
+                            @if (Model.RolUsuario == "Auditor")
                             {
                                 <a href="/Inventario/Formulario/Ver/@equipo.id_activofijo" class="btn btn-action">
                                     <i class="fas fa-eye"></i>
                                 </a>
                             }
-                            @if (Model.RolUsuario != "Usuario")
+                            @if (Model.RolUsuario != "Auditor")
                             {
                                 <a href="/Inventario/Formulario/Editar/@equipo.id_activofijo" class="btn btn-action">
                                     <i class="fas fa-pen"></i>
                                 </a>
                             }
-                            @if (Model.RolUsuario != "Usuario")
+                            @if (Model.RolUsuario != "Auditor")
                             {
                                 <button class="btn btn-action btn-mantenimiento"
                                         data-id="@equipo.id_activofijo"
@@ -257,7 +257,7 @@
                     $"&sortDirection={Model.SortDirection}" +
                     $"&tipoequipo={Model.TipoEquipoFilter}" +
                     $"&marca={Model.MarcaFilter}" +
-                    $"&sucursal={Model.SucursalFilter}" +
+                    $"&departamentoempresa={Model.DepartamentoEmpresaFilter}" +
                     $"&estado={Model.EstadoFilter}" +
                     $"&empleado={Model.EmpleadoFilter}" +
                     $"&busqueda={Model.BusquedaFilter}";

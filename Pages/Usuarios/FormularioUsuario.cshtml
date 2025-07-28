@@ -46,7 +46,7 @@
         }
 
         <div class="form-group">
-            <label asp-for="Usuario.IdEmpleado" class="form-label">Empleado</label>
+            <label asp-for="Usuario.IdEmpleado" class="form-label">Empleado (NO Obligatorio)</label>
             <select asp-for="Usuario.IdEmpleado" class="form-control input-beige"
                     disabled="@(esModoLectura || Model.Modo == "Editar")">
                 <option value="">-- Seleccione un empleado --</option>

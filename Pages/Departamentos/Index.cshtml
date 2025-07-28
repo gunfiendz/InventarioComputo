@@ -1,0 +1,231 @@
+﻿@page
+@model InventarioComputo.Pages.Sucursales.DepartamentosModel
+@{
+    ViewData["Title"] = "Gestión de Departamentos";
+    Layout = "_LayoutGeneral";
+}
+
+<div class="inventario-container">
+    <div class="inventario-header">
+        <h1 class="beige-text"><i class="fas fa-building"></i> @ViewData["Title"]</h1>
+        <a asp-page="NuevoDepartamento" class="btn btn-beige">
+            <i class="fas fa-plus"></i> Nuevo Departamento
+        </a>
+    </div>
+
+    <div class="filtros-container beige-bg">
+        <div class="filtros-group">
+            <div class="filtro-item">
+                <label class="form-label beige-text">Buscar:</label>
+                <input type="text" id="filtro-busqueda" class="form-control input-beige"
+                       placeholder="Nombre, descripción..."
+                       value="@Model.BusquedaFilter">
+            </div>
+        </div>
+        <button id="btn-aplicar-filtros" class="btn btn-beige-sm">
+            <i class="fas fa-filter"></i> Aplicar Filtros
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-beige sortable-table">
+            <thead>
+                <tr>
+                    <th data-sort-column="NombreDepartamento">
+                        <a href="#" class="sort-link">
+                            Departamento
+                            @if (Model.SortColumn == "NombreDepartamento")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Descripcion">
+                        <a href="#" class="sort-link">
+                            Descripción
+                            @if (Model.SortColumn == "Descripcion")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th>Áreas Asociadas</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var departamento in Model.Departamentos)
+                {
+                    <tr>
+                        <td>@departamento.Nombre</td>
+                        <td>@departamento.Descripcion</td>
+                        <td>
+                            @if (departamento.AreasAsociadas.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var area in departamento.AreasAsociadas)
+                                    {
+                                        <span class="badge bg-beige">@area</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span>Sin áreas asociadas</span>
+                            }
+                        </td>
+                        <td class="acciones">
+                            <a asp-page="EditarDepartamento" asp-route-id="@departamento.Id" class="btn btn-action" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-action btn-eliminar"
+                                    data-id="@departamento.Id"
+                                    data-nombre="@departamento.Nombre"
+                                    title="Eliminar">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="paginacion">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                @for (int i = 1; i <= Model.TotalPaginas; i++)
+                {
+                    var url = $"/Sucursales?pagina={i}" +
+                    $"&sortColumn={Model.SortColumn}" +
+                    $"&sortDirection={Model.SortDirection}" +
+                    $"&busqueda={Model.BusquedaFilter}";
+
+                    <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
+                        <a class="page-link" href="@url">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header beige-bg">
+                <h5 class="modal-title beige-text">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                ¿Está seguro que desea eliminar el departamento <strong id="nombreDepartamentoEliminar"></strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btn-confirmar-eliminar">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/Styles/Style_Inventario.css" asp-append-version="true" />
+    <style>
+        .badge.bg-beige {
+            background-color: #f5f5dc;
+            color: #333;
+            font-weight: normal;
+            padding: 0.4em 0.65em;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+
+        .d-flex {
+            display: flex;
+        }
+
+        .flex-wrap {
+            flex-wrap: wrap;
+        }
+
+        .gap-1 {
+            gap: 0.25rem;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.sort-link').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const column = this.closest('th').dataset.sortColumn;
+                const currentOrder = '@Model.SortDirection';
+                const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+
+                const url = new URL(window.location.href);
+                url.searchParams.set('sortColumn', column);
+                url.searchParams.set('sortDirection', newOrder);
+                url.searchParams.set('pagina', '1');
+
+                window.location.href = url.toString();
+            });
+        });
+
+        let departamentoAEliminar = null;
+        document.querySelectorAll('.btn-eliminar').forEach(btn => {
+            btn.addEventListener('click', function () {
+                departamentoAEliminar = {
+                    id: this.getAttribute('data-id'),
+                    nombre: this.getAttribute('data-nombre')
+                };
+
+                document.getElementById('nombreDepartamentoEliminar').textContent = departamentoAEliminar.nombre;
+                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+                modal.show();
+            });
+        });
+
+        document.getElementById('btn-confirmar-eliminar').addEventListener('click', function () {
+            if (departamentoAEliminar) {
+                fetch(`/Departamentos/Eliminar/${departamentoAEliminar.id}`, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value,
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Error al eliminar el departamento');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar el departamento');
+                });
+            }
+        });
+
+        document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
+            const busqueda = document.getElementById('filtro-busqueda').value;
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('pagina', '1');
+            url.searchParams.set('sortColumn', '@Model.SortColumn');
+            url.searchParams.set('sortDirection', '@Model.SortDirection');
+            if (busqueda) url.searchParams.set('busqueda', busqueda);
+
+            window.location.href = url.toString();
+        });
+    </script>
+}

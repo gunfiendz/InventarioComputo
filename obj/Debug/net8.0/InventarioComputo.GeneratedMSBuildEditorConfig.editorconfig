@@ -18,12 +18,20 @@ build_property.GenerateRazorMetadataSourceChecksumAttributes =
 build_property.MSBuildProjectDirectory = C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo
 build_property._RazorSourceGeneratorDebug = 
 
+[C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Departamentos/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRGVwYXJ0YW1lbnRvc1xJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Empleados/FormularioEmpleado.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRW1wbGVhZG9zXEZvcm11bGFyaW9FbXBsZWFkby5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Empleados/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRW1wbGVhZG9zXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/EquiposRegistrados/EquiposForm.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRXF1aXBvc1JlZ2lzdHJhZG9zXEVxdWlwb3NGb3JtLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/EquiposRegistrados/Index.cshtml]
@@ -72,10 +80,6 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Shared/_ValidationScriptsPartial.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Sucursales/Index.cshtml]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU3VjdXJzYWxlc1xJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/Ramon Zavala/source/repos/InventarioComputo/InventarioComputo/Pages/Usuarios/FormularioUsuario.cshtml]

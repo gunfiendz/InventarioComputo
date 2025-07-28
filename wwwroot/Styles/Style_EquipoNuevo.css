@@ -88,3 +88,35 @@ input[type="date"] {
         outline: none;
         box-shadow: 0 0 0 3px rgba(210, 180, 140, 0.3);
     }
+
+/* Estilos para la sección dinámica de EquiposRegistrados */
+.caracteristica-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-eliminar-caracteristica {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.licencia-input {
+    margin-left: 25px;
+    max-width: 300px;
+}
+
+.caracteristica-select option[hidden] {
+    display: none;
+}
+
+.caracteristica-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s;
+}
+
+    .caracteristica-item:hover {
+        background-color: #f8f9fa;
+    }

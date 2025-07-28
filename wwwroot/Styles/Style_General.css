@@ -207,3 +207,45 @@ body {
         font-size: 1.3rem;
     }
 }
+
+.caracteristicas-card {
+    margin-top: 2rem;
+    border: 1px solid var(--beige-medium);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    height: calc(100% - 2rem);
+}
+
+    .caracteristicas-card .card-header {
+        background-color: var(--beige-light);
+        color: var(--beige-text);
+        font-weight: 600;
+        border-bottom: 1px solid var(--beige-medium);
+    }
+
+    .caracteristicas-card .card-body {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+.list-group-item {
+    background-color: var(--beige-bg);
+    border: 1px solid var(--beige-light);
+    padding: 0.75rem 1.25rem;
+}
+
+@media (max-width: 768px) {
+    .row {
+        flex-direction: column;
+    }
+
+    .col-md-6 {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .caracteristicas-card {
+        margin-top: 1rem;
+        height: auto;
+    }
+}

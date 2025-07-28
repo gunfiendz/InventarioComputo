@@ -11,7 +11,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(options =>
     {
         options.LoginPath = "/Index";
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+        //EXPIRACION DE SESION
+        //options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
     });
 
 builder.Services.AddAuthorization();

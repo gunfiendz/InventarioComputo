@@ -14,7 +14,7 @@ namespace InventarioComputo.Pages.Inventario
         private readonly ConexionBDD _dbConnection;
 
         public List<Equipo> Equipos { get; set; } = new List<Equipo>();
-        public List<Sucursal> Sucursales { get; set; } = new List<Sucursal>();
+        public List<DepartamentoEmpresa> DepartamentosEmpresa { get; set; } = new List<DepartamentoEmpresa>();
         public List<Estado> Estados { get; set; } = new List<Estado>();
         public List<TipoEquipo> TiposEquipos { get; set; } = new List<TipoEquipo>();
         public List<Marca> Marcas { get; set; } = new List<Marca>();
@@ -32,7 +32,8 @@ namespace InventarioComputo.Pages.Inventario
         // Propiedades para filtros
         public string TipoEquipoFilter { get; set; }
         public string MarcaFilter { get; set; }
-        public string SucursalFilter { get; set; }
+        public string DepartamentoEmpresaFilter { get; set; }
+        public string AreaFilter { get; set; }
         public string EstadoFilter { get; set; }
         public string EmpleadoFilter { get; set; }
         public string BusquedaFilter { get; set; }
@@ -48,7 +49,7 @@ namespace InventarioComputo.Pages.Inventario
             PaginaActual = Convert.ToInt32(Request.Query["pagina"].FirstOrDefault() ?? "1");
             TipoEquipoFilter = Request.Query["tipoequipo"].FirstOrDefault() ?? "";
             MarcaFilter = Request.Query["marca"].FirstOrDefault() ?? "";
-            SucursalFilter = Request.Query["sucursal"].FirstOrDefault() ?? "";
+            DepartamentoEmpresaFilter = Request.Query["departamentoempresa"].FirstOrDefault() ?? "";
             EstadoFilter = Request.Query["estado"].FirstOrDefault() ?? "";
             EmpleadoFilter = Request.Query["empleado"].FirstOrDefault() ?? "";
             BusquedaFilter = Request.Query["busqueda"].FirstOrDefault() ?? "";
@@ -61,15 +62,15 @@ namespace InventarioComputo.Pages.Inventario
 
             // Validar y mapear columnas para evitar SQL injection
             var columnasValidas = new Dictionary<string, string>
-            {
-                {"EtiquetaInv", "af.EtiquetaInv"},
-                {"NumeroSerie", "af.NumeroSerie"},
-                {"TipoEquipo", "te.TipoEquipo"},
-                {"Marca", "m.Marca"},
-                {"Sucursal", "s.Nombre"},
-                {"Estado", "e.Estado"},
-                {"AsignadoA", "emp.Nombre"}
-            };
+    {
+        {"EtiquetaInv", "af.EtiquetaInv"},
+        {"NumeroSerie", "af.NumeroSerie"},
+        {"TipoEquipo", "te.TipoEquipo"},
+        {"Marca", "m.Marca"},
+        {"DepartamentoEmpresa", "ISNULL(de.NombreDepartamento, 'No asignado')"},
+        {"Estado", "e.Estado"},
+        {"AsignadoA", "ISNULL(emp.Nombre, 'No asignado')"}
+    };
 
             if (!columnasValidas.ContainsKey(SortColumn))
             {
@@ -83,15 +84,15 @@ namespace InventarioComputo.Pages.Inventario
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 {
                     // Obtener datos para los dropdowns
-                    var cmdSucursales = new SqlCommand("SELECT id_sucursal, Nombre FROM Sucursales ORDER BY Nombre", connection);
-                    using (var reader = await cmdSucursales.ExecuteReaderAsync())
+                    var cmdDepartamentosEmpresa = new SqlCommand("SELECT id_DE, NombreDepartamento FROM DepartamentosEmpresa ORDER BY NombreDepartamento", connection);
+                    using (var reader = await cmdDepartamentosEmpresa.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
                         {
-                            Sucursales.Add(new Sucursal
+                            DepartamentosEmpresa.Add(new DepartamentoEmpresa
                             {
-                                id_sucursal = reader.GetInt32(0),
-                                Nombre = reader.GetString(1)
+                                id_DE = reader.GetInt32(0),
+                                NombreDepartamento = reader.GetString(1)
                             });
                         }
                     }
@@ -148,41 +149,75 @@ namespace InventarioComputo.Pages.Inventario
                         }
                     }
 
-                    // Consulta principal con parámetros para evitar SQL injection
+                    // Consulta para contar el total de registros (paginación)
+                    var countQuery = @"
+                SELECT COUNT(*)
+                FROM ActivosFijos af
+                JOIN Modelos mo ON af.id_modelo = mo.id_modelo
+                JOIN Marcas m ON mo.id_marca = m.id_marca
+                JOIN TiposEquipos te ON mo.id_tipoequipo = te.id_tipoequipo
+                JOIN Estados e ON af.id_estado = e.id_estado
+                LEFT JOIN EmpleadosEquipos ee ON af.id_activofijo = ee.id_activofijo AND ee.ResponsableActual = 1
+                LEFT JOIN Empleados emp ON ee.id_empleado = emp.id_empleado
+                LEFT JOIN DepartamentosEmpresa de ON ee.id_DE = de.id_DE
+                WHERE (@TipoEquipo = 0 OR mo.id_tipoequipo = @TipoEquipo)
+                AND (@Marca = 0 OR mo.id_marca = @Marca)
+                AND (@DepartamentoEmpresa = 0 OR de.id_DE = @DepartamentoEmpresa OR de.id_DE IS NULL)
+                AND (@Estado = 0 OR af.id_estado = @Estado)
+                AND (@Empleado = 0 OR ee.id_empleado = @Empleado OR ee.id_empleado IS NULL)
+                AND (@Busqueda = '' OR af.EtiquetaInv LIKE '%' + @Busqueda + '%' OR af.NumeroSerie LIKE '%' + @Busqueda + '%')";
+
+                    var countCommand = new SqlCommand(countQuery, connection);
+                    countCommand.Parameters.AddWithValue("@TipoEquipo", string.IsNullOrEmpty(TipoEquipoFilter) ? 0 : int.Parse(TipoEquipoFilter));
+                    countCommand.Parameters.AddWithValue("@Marca", string.IsNullOrEmpty(MarcaFilter) ? 0 : int.Parse(MarcaFilter));
+                    countCommand.Parameters.AddWithValue("@DepartamentoEmpresa", string.IsNullOrEmpty(DepartamentoEmpresaFilter) ? 0 : int.Parse(DepartamentoEmpresaFilter));
+                    countCommand.Parameters.AddWithValue("@Estado", string.IsNullOrEmpty(EstadoFilter) ? 0 : int.Parse(EstadoFilter));
+                    countCommand.Parameters.AddWithValue("@Empleado", string.IsNullOrEmpty(EmpleadoFilter) ? 0 : int.Parse(EmpleadoFilter));
+                    countCommand.Parameters.AddWithValue("@Busqueda", BusquedaFilter ?? "");
+
+                    var totalRegistros = (int)await countCommand.ExecuteScalarAsync();
+                    TotalPaginas = (int)Math.Ceiling((double)totalRegistros / RegistrosPorPagina);
+
+                    // Consulta principal con parámetros
                     var query = $@"
-                        SELECT 
-                            af.id_activofijo, af.EtiquetaInv, af.NumeroSerie,
-                            te.TipoEquipo, m.Marca, mo.Modelo,
-                            s.Nombre AS Sucursal, e.Estado,
-                            ISNULL(emp.Nombre, 'No asignado') AS AsignadoA,
-                            COUNT(*) OVER() AS TotalRegistros
-                        FROM ActivosFijos af
-                        JOIN Modelos mo ON af.id_modelo = mo.id_modelo
-                        JOIN Marcas m ON mo.id_marca = m.id_marca
-                        JOIN TiposEquipos te ON mo.id_tipoequipo = te.id_tipoequipo
-                        JOIN Sucursales s ON af.id_sucursal = s.id_sucursal
-                        JOIN Estados e ON af.id_estado = e.id_estado
-                        LEFT JOIN EmpleadosEquipos ee ON af.id_activofijo = ee.id_activofijo AND ee.ResponsableActual = 1
-                        LEFT JOIN Empleados emp ON ee.id_empleado = emp.id_empleado
-                        WHERE (@TipoEquipo = 0 OR mo.id_tipoequipo = @TipoEquipo)
-                        AND (@Marca = 0 OR mo.id_marca = @Marca)
-                        AND (@Sucursal = 0 OR af.id_sucursal = @Sucursal)
-                        AND (@Estado = 0 OR af.id_estado = @Estado)
-                        AND (@Empleado = 0 OR ee.id_empleado = @Empleado)
-                        AND (@Busqueda = '' OR af.EtiquetaInv LIKE '%' + @Busqueda + '%' OR af.NumeroSerie LIKE '%' + @Busqueda + '%')
-                        ORDER BY {columnasValidas[SortColumn]} {SortDirection}
-                        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+                SELECT 
+                    af.id_activofijo, 
+                    af.EtiquetaInv, 
+                    af.NumeroSerie,
+                    te.TipoEquipo, 
+                    m.Marca, 
+                    mo.Modelo,
+                    ISNULL(de.NombreDepartamento, 'No asignado') AS Departamento, 
+                    e.Estado,
+                    ISNULL(emp.Nombre, 'No asignado') AS AsignadoA
+                FROM ActivosFijos af
+                JOIN Modelos mo ON af.id_modelo = mo.id_modelo
+                JOIN Marcas m ON mo.id_marca = m.id_marca
+                JOIN TiposEquipos te ON mo.id_tipoequipo = te.id_tipoequipo
+                JOIN Estados e ON af.id_estado = e.id_estado
+                LEFT JOIN EmpleadosEquipos ee ON af.id_activofijo = ee.id_activofijo AND ee.ResponsableActual = 1
+                LEFT JOIN Empleados emp ON ee.id_empleado = emp.id_empleado
+                LEFT JOIN DepartamentosEmpresa de ON ee.id_DE = de.id_DE
+                WHERE (@TipoEquipo = 0 OR mo.id_tipoequipo = @TipoEquipo)
+                AND (@Marca = 0 OR mo.id_marca = @Marca)
+                AND (@DepartamentoEmpresa = 0 OR de.id_DE = @DepartamentoEmpresa)
+                AND (@Estado = 0 OR af.id_estado = @Estado)
+                AND (@Empleado = 0 OR ee.id_empleado = @Empleado)
+                AND (@Busqueda = '' OR af.EtiquetaInv LIKE '%' + @Busqueda + '%' OR af.NumeroSerie LIKE '%' + @Busqueda + '%')
+                ORDER BY {columnasValidas[SortColumn]} {SortDirection}
+                OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
                     var command = new SqlCommand(query, connection);
                     command.Parameters.AddWithValue("@TipoEquipo", string.IsNullOrEmpty(TipoEquipoFilter) ? 0 : int.Parse(TipoEquipoFilter));
                     command.Parameters.AddWithValue("@Marca", string.IsNullOrEmpty(MarcaFilter) ? 0 : int.Parse(MarcaFilter));
-                    command.Parameters.AddWithValue("@Sucursal", string.IsNullOrEmpty(SucursalFilter) ? 0 : int.Parse(SucursalFilter));
+                    command.Parameters.AddWithValue("@DepartamentoEmpresa", string.IsNullOrEmpty(DepartamentoEmpresaFilter) ? 0 : int.Parse(DepartamentoEmpresaFilter));
                     command.Parameters.AddWithValue("@Estado", string.IsNullOrEmpty(EstadoFilter) ? 0 : int.Parse(EstadoFilter));
                     command.Parameters.AddWithValue("@Empleado", string.IsNullOrEmpty(EmpleadoFilter) ? 0 : int.Parse(EmpleadoFilter));
                     command.Parameters.AddWithValue("@Busqueda", BusquedaFilter ?? "");
                     command.Parameters.AddWithValue("@Offset", (PaginaActual - 1) * RegistrosPorPagina);
                     command.Parameters.AddWithValue("@PageSize", RegistrosPorPagina);
 
+                    Equipos = new List<Equipo>();
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
@@ -195,17 +230,10 @@ namespace InventarioComputo.Pages.Inventario
                                 TipoEquipo = reader.GetString(3),
                                 Marca = reader.GetString(4),
                                 Modelo = reader.GetString(5),
-                                Sucursal = reader.GetString(6),
+                                DepartamentoEmpresa = reader.GetString(6),
                                 Estado = reader.GetString(7),
                                 AsignadoA = reader.GetString(8)
                             };
-
-                            if (reader.FieldCount > 9)
-                            {
-                                int totalRegistros = reader.GetInt32(9);
-                                TotalPaginas = (int)Math.Ceiling((double)totalRegistros / RegistrosPorPagina);
-                            }
-
                             Equipos.Add(equipo);
                         }
                     }
@@ -213,7 +241,6 @@ namespace InventarioComputo.Pages.Inventario
             }
             catch (Exception ex)
             {
-                // Loggear el error
                 Console.WriteLine($"Error al cargar inventario: {ex.Message}");
             }
         }
@@ -226,15 +253,15 @@ namespace InventarioComputo.Pages.Inventario
             public string TipoEquipo { get; set; }
             public string Marca { get; set; }
             public string Modelo { get; set; }
-            public string Sucursal { get; set; }
+            public string DepartamentoEmpresa { get; set; }
             public string Estado { get; set; }
             public string AsignadoA { get; set; }
         }
 
-        public class Sucursal
+        public class DepartamentoEmpresa
         {
-            public int id_sucursal { get; set; }
-            public string Nombre { get; set; }
+            public int id_DE { get; set; }
+            public string NombreDepartamento { get; set; }
         }
 
         public class Estado

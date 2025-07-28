@@ -46,6 +46,7 @@ namespace InventarioComputo.Pages.EquiposRegistrados
             // Validar columnas
             var columnasValidas = new Dictionary<string, string>
             {
+                {"NombrePerfil", "m.NombrePerfil"},
                 {"Modelo", "m.Modelo"},
                 {"Marca", "ma.Marca"},
                 {"Tipo", "te.TipoEquipo"}
@@ -108,20 +109,21 @@ namespace InventarioComputo.Pages.EquiposRegistrados
             var query = $@"
                 SELECT 
                     m.id_modelo,
+                    m.NombrePerfil as 'Nombre del Perfil',
                     m.Modelo,
                     ma.Marca,
                     te.TipoEquipo,
-                    STRING_AGG(c.Caracteristica + ': ' + ce.Valor, ', ') AS Caracteristicas,
+                    STRING_AGG(c.Caracteristica + ': ' + cm.Valor, ', ') AS Caracteristicas,
                     COUNT(*) OVER() AS TotalRegistros
                 FROM Modelos m
                 JOIN Marcas ma ON m.id_marca = ma.id_marca
                 JOIN TiposEquipos te ON m.id_tipoequipo = te.id_tipoequipo
-                LEFT JOIN CaracteristicasEquipos ce ON m.id_modelo = ce.id_activofijo
-                LEFT JOIN Caracteristicas c ON ce.id_caracteristica = c.id_caracteristica
+                LEFT JOIN CaracteristicasModelos cm ON m.id_modelo = cm.id_modelo
+                LEFT JOIN Caracteristicas c ON cm.id_caracteristica = c.id_caracteristica
                 WHERE (@Tipo IS NULL OR m.id_tipoequipo = @Tipo)
                 AND (@Marca IS NULL OR m.id_marca = @Marca)
                 AND (@Busqueda = '' OR m.Modelo LIKE '%' + @Busqueda + '%' OR ma.Marca LIKE '%' + @Busqueda + '%')
-                GROUP BY m.id_modelo, m.Modelo, ma.Marca, te.TipoEquipo
+                GROUP BY m.id_modelo, m.NombrePerfil, m.Modelo, ma.Marca, te.TipoEquipo
                 ORDER BY {sortColumn} {SortDirection}
                 OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
@@ -141,20 +143,21 @@ namespace InventarioComputo.Pages.EquiposRegistrados
                     var modelo = new ModeloViewModel
                     {
                         Id = reader.GetInt32(0),
-                        Nombre = reader.GetString(1),
-                        Marca = reader.GetString(2),
-                        Tipo = reader.GetString(3)
+                        NombrePerfil = reader.GetString(1),
+                        NombreModelo = reader.GetString(2),
+                        Marca = reader.GetString(3),
+                        Tipo = reader.GetString(4)
                     };
-
-                    if (!reader.IsDBNull(4))
-                    {
-                        var caracteristicas = reader.GetString(4).Split(", ");
-                        modelo.Caracteristicas.AddRange(caracteristicas);
-                    }
 
                     if (!reader.IsDBNull(5))
                     {
-                        TotalPaginas = (int)Math.Ceiling((double)reader.GetInt32(5) / RegistrosPorPagina);
+                        var caracteristicas = reader.GetString(5).Split(", ");
+                        modelo.Caracteristicas.AddRange(caracteristicas);
+                    }
+
+                    if (!reader.IsDBNull(6))
+                    {
+                        TotalPaginas = (int)Math.Ceiling((double)reader.GetInt32(6) / RegistrosPorPagina);
                     }
 
                     Modelos.Add(modelo);
@@ -165,7 +168,8 @@ namespace InventarioComputo.Pages.EquiposRegistrados
         public class ModeloViewModel
         {
             public int Id { get; set; }
-            public string Nombre { get; set; }
+            public string NombrePerfil { get; set; }
+            public string NombreModelo { get; set; }
             public string Marca { get; set; }
             public string Tipo { get; set; }
             public List<string> Caracteristicas { get; set; } = new List<string>();

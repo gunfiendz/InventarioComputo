@@ -11,214 +11,339 @@
 <div class="container-form">
     <h1 class="beige-text"><i class="fas fa-laptop"></i> @ViewData["Title"]</h1>
 
-    <form method="post" class="form-beige">
-        <input type="hidden" asp-for="Equipo.IdActivoFijo" />
+    <div class="row">
+        <!-- Columna izquierda (formulario) -->
+        <div class="col-md-6">
+            <form method="post" class="form-beige">
+                <input type="hidden" asp-for="Equipo.IdActivoFijo" />
+                <input type="hidden" id="modeloId" value="@Model.Equipo.IdModelo" />
 
-        <div class="form-group">
-            <label asp-for="Equipo.NumeroSerie" class="form-label"></label>
-            <input asp-for="Equipo.NumeroSerie" class="form-control" readonly="@esModoLectura" />
-            <span asp-validation-for="Equipo.NumeroSerie" class="text-danger"></span>
-        </div>
+                <div class="form-group">
+                    <label asp-for="Equipo.NumeroSerie" class="form-label">Numero de Serie</label>
+                    <input asp-for="Equipo.NumeroSerie" class="form-control" readonly="@esModoLectura" />
+                    <span asp-validation-for="Equipo.NumeroSerie" class="text-danger"></span>
+                </div>
 
-        <div class="form-group">
-            <label asp-for="Equipo.EtiquetaInv" class="form-label"></label>
-            <input asp-for="Equipo.EtiquetaInv" class="form-control" readonly="@esModoLectura" />
-            <span asp-validation-for="Equipo.EtiquetaInv" class="text-danger"></span>
-        </div>
+                <div class="form-group">
+                    <label asp-for="Equipo.EtiquetaInv" class="form-label"></label>
+                    <input asp-for="Equipo.EtiquetaInv" class="form-control" readonly="@esModoLectura" />
+                    <span asp-validation-for="Equipo.EtiquetaInv" class="text-danger"></span>
+                </div>
 
-        <div class="form-group">
-            <label asp-for="Equipo.IdTipoEquipo" class="form-label">Tipo de Equipo</label>
-            <select asp-for="Equipo.IdTipoEquipo" class="form-control input-beige"
-                    id="tipoEquipo" disabled="@(Model.Modo == "Ver")">
-                <option value="">-- Seleccione un tipo --</option>
-                @foreach (var tipo in Model.TiposEquipos)
+                <div class="form-group">
+                    <label asp-for="Equipo.IdTipoEquipo" class="form-label">Tipo de Equipo</label>
+                    <select asp-for="Equipo.IdTipoEquipo" class="form-control input-beige"
+                            id="tipoEquipo" disabled="@(Model.Modo == "Ver")">
+                        <option value="">-- Seleccione un tipo --</option>
+                        @foreach (var tipo in Model.TiposEquipos)
+                        {
+                            <option value="@tipo.Id"
+                                    selected="@(tipo.Id == Model.Equipo?.IdTipoEquipo)">
+                                @tipo.Nombre
+                            </option>
+                        }
+                    </select>
+                    <span asp-validation-for="Equipo.IdTipoEquipo" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Marca</label>
+                    <select class="form-control input-beige" id="marca">
+                        @if (Model.Equipo?.IdMarca.HasValue == true && Model.Marcas?.Any() == true)
+                        {
+                            <option value="@Model.Equipo.IdMarca" selected>
+                                @Model.Marcas.First(m => m.Id == Model.Equipo.IdMarca).Nombre
+                            </option>
+                        }
+                        else
+                        {
+                            <option value="">-- Seleccione un tipo primero --</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Equipo.IdModelo" class="form-label">Modelo</label>
+                    <select asp-for="Equipo.IdModelo" class="form-control input-beige" id="modelo">
+                        @if (Model.Equipo?.IdModelo > 0 && Model.Modelos?.Any() == true)
+                        {
+                            <option value="@Model.Equipo.IdModelo" selected>
+                                @Model.Modelos.First(m => m.Id == Model.Equipo.IdModelo).Nombre
+                            </option>
+                        }
+                        else
+                        {
+                            <option value="">-- Seleccione una marca primero --</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Equipo.IdModelo" class="text-danger"></span>
+                </div>
+
+                <!-- Nuevo campo para selección de perfil -->
+                <div class="form-group">
+                    <label asp-for="Equipo.NombrePerfil" class="form-label">Perfil del Modelo</label>
+                    <select asp-for="Equipo.NombrePerfil" class="form-control input-beige"
+                            id="perfil" disabled="@(Model.Modo == "Ver")">
+                        @if (Model.Perfiles?.Any() == true)
+                        {
+                            <option value="">-- Seleccione un perfil --</option>
+                            @foreach (var perfil in Model.Perfiles)
+                            {
+                                <option value="@perfil"
+                                        selected="@(perfil == Model.Equipo?.NombrePerfil)">
+                                    @perfil
+                                </option>
+                            }
+                        }
+                        else
+                        {
+                            <option value="">-- No hay perfiles disponibles --</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Equipo.NombrePerfil" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Equipo.FechaCompra" class="form-label"></label>
+                    <input asp-for="Equipo.FechaCompra" type="date" class="form-control" readonly="@esModoLectura">
+                    <span asp-validation-for="Equipo.FechaCompra" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Equipo.Garantia" class="form-label"></label>
+                    <input asp-for="Equipo.Garantia" class="form-control" readonly="@esModoLectura" />
+                    <span asp-validation-for="Equipo.Garantia" class="text-danger"></span>
+                </div>
+
+                <input type="hidden" asp-for="Equipo.IdEstado" />
+
+                @if (!esModoLectura)
                 {
-                    <option value="@tipo.Id"
-                            selected="@(tipo.Id == Model.Equipo?.IdTipoEquipo)">
-                        @tipo.Nombre
-                    </option>
-                }
-            </select>
-            <span asp-validation-for="Equipo.IdTipoEquipo" class="text-danger"></span>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">Marca</label>
-            <select class="form-control input-beige" id="marca">
-                @if (Model.Equipo?.IdMarca.HasValue == true && Model.Marcas?.Any() == true)
-                {
-                    <option value="@Model.Equipo.IdMarca" selected>
-                        @Model.Marcas.First(m => m.Id == Model.Equipo.IdMarca).Nombre
-                    </option>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-beige">Guardar</button>
+                        <a href="/Inventario" class="btn btn-cancelar">Cancelar</a>
+                    </div>
                 }
                 else
                 {
-                    <option value="">-- Seleccione un tipo primero --</option>
+                    <div class="form-actions">
+                        <a href="/Inventario/Editar/@Model.Equipo.IdActivoFijo" class="btn btn-beige">Editar</a>
+                        <a href="/Inventario" class="btn btn-cancelar">Volver</a>
+                    </div>
                 }
-            </select>
+            </form>
         </div>
 
-        <div class="form-group">
-            <label asp-for="Equipo.IdModelo" class="form-label">Modelo</label>
-            <select asp-for="Equipo.IdModelo" class="form-control input-beige" id="modelo">
-                @if (Model.Equipo?.IdModelo > 0 && Model.Modelos?.Any() == true)
-                {
-                    <option value="@Model.Equipo.IdModelo" selected>
-                        @Model.Modelos.First(m => m.Id == Model.Equipo.IdModelo).Nombre
-                    </option>
-                }
-                else
-                {
-                    <option value="">-- Seleccione una marca primero --</option>
-                }
-            </select>
-            <span asp-validation-for="Equipo.IdModelo" class="text-danger"></span>
-        </div>
-
-        <div class="form-group">
-            <label asp-for="Equipo.FechaCompra" class="form-label"></label>
-            <input asp-for="Equipo.FechaCompra" type="date" class="form-control" readonly="@esModoLectura">
-            <span asp-validation-for="Equipo.FechaCompra" class="text-danger"></span>
-        </div>
-
-        <div class="form-group">
-            <label asp-for="Equipo.Garantia" class="form-label"></label>
-            <input asp-for="Equipo.Garantia" class="form-control" readonly="@esModoLectura" />
-            <span asp-validation-for="Equipo.Garantia" class="text-danger"></span>
-        </div>
-
-        <div class="form-group">
-            <label asp-for="Equipo.IdSucursal" class="form-label"></label>
-            <select asp-for="Equipo.IdSucursal" class="form-control input-beige" disabled="@esModoLectura">
-                <option value="">-- Seleccione una sucursal --</option>
-                @foreach (var sucursal in Model.Sucursales)
-                {
-                    <option value="@sucursal.Id">@sucursal.Nombre</option>
-                }
-            </select>
-            <span asp-validation-for="Equipo.IdSucursal" class="text-danger"></span>
-        </div>
-
-        <input type="hidden" asp-for="Equipo.IdEstado" />
-
-        @if (!esModoLectura)
-        {
-            <div class="form-actions">
-                <button type="submit" class="btn btn-beige">Guardar</button>
-                <a href="/Inventario" class="btn btn-cancelar">Cancelar</a>
+        <!-- Columna derecha (características) -->
+        <div class="col-md-6">
+            <div class="card caracteristicas-card">
+                <div class="card-header">
+                    <h5>Características del Perfil</h5>
+                </div>
+                <div class="card-body" id="caracteristicas-container">
+                    @if (!string.IsNullOrEmpty(Model.Equipo?.NombrePerfil))
+                    {
+                        <ul class="list-group">
+                            <!-- Las características se cargarán dinámicamente via AJAX -->
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Seleccione un perfil para ver sus características</p>
+                    }
+                </div>
             </div>
-        }
-        else
-        {
-            <div class="form-actions">
-                <a href="/Inventario/Editar/@Model.Equipo.IdActivoFijo" class="btn btn-beige">Editar</a>
-                <a href="/Inventario" class="btn btn-cancelar">Volver</a>
-            </div>
-        }
-    </form>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const esModoLectura = '@Model.Modo' === 'Ver';
+            const modeloId = @Model.Equipo?.IdModelo;
+            const perfilSelect = document.getElementById('perfil');
 
             if (!esModoLectura) {
+                // Configurar eventos para los dropdowns
                 document.getElementById('tipoEquipo').addEventListener('change', cargarMarcas);
                 document.getElementById('marca').addEventListener('change', cargarModelos);
 
-                if (tipoSelect.value) {
+                // Evento para cuando cambia el modelo
+                document.getElementById('modelo').addEventListener('change', function () {
+                    const nuevoModeloId = this.value;
+                    cargarPerfiles(nuevoModeloId);
+
+                    // Limpiar características
+                    document.getElementById('caracteristicas-container').innerHTML =
+                        '<p class="text-muted">Seleccione un perfil para ver sus características</p>';
+                });
+
+                // Evento para cuando cambia el perfil
+                perfilSelect.addEventListener('change', function () {
+                    cargarCaracteristicas(modeloId, this.value);
+                });
+
+                // Cargar datos iniciales si es necesario
+                if (document.getElementById('tipoEquipo').value) {
                     cargarMarcas().then(() => {
-                        if (marcaSelect.value) {
-                            cargarModelos();
+                        if (document.getElementById('marca').value) {
+                            cargarModelos().then(() => {
+                                if (document.getElementById('modelo').value) {
+                                    cargarPerfiles(modeloId);
+                                }
+                            });
                         }
                     });
                 }
             } else {
-                const tipoSelect = document.getElementById('tipoEquipo');
-                const marcaSelect = document.getElementById('marca');
-                const modeloSelect = document.getElementById('modelo');
-
-                tipoSelect.disabled = esModoLectura;
-
-                marcaSelect.disabled = esModoLectura || !esModoLectura && !tipoSelect.value;
-
-                modeloSelect.disabled = esModoLectura || !esModoLectura && !marcaSelect.value;
+                // Si es modo lectura, cargar características del perfil seleccionado
+                if (perfilSelect.value) {
+                    cargarCaracteristicas(modeloId, perfilSelect.value);
+                }
             }
-            
+
+            async function cargarPerfiles(modeloId) {
+                const perfilDropdown = document.getElementById('perfil');
+
+                if (!modeloId) {
+                    perfilDropdown.innerHTML = '<option value="">-- Seleccione un modelo primero --</option>';
+                    perfilDropdown.disabled = true;
+                    return;
+                }
+
+                try {
+                    perfilDropdown.innerHTML = '<option value="">Cargando perfiles...</option>';
+
+                    const response = await fetch(`/Inventario/Formulario?handler=PerfilesPorModelo&modeloId=${modeloId}`);
+                    if (!response.ok) throw new Error('Error en la respuesta');
+
+                    const perfiles = await response.json();
+
+                    let options = '<option value="">-- Seleccione un perfil --</option>';
+                    perfiles.forEach(perfil => {
+                        const selected = perfil === '@Model.Equipo?.NombrePerfil' ? 'selected' : '';
+                        options += `<option value="${perfil}" ${selected}>${perfil}</option>`;
+                    });
+
+                    perfilDropdown.innerHTML = options;
+                    perfilDropdown.disabled = false;
+
+                    // Si hay un perfil seleccionado, cargar sus características
+                    if (perfilSelect.value) {
+                        cargarCaracteristicas(modeloId, perfilSelect.value);
+                    }
+                } catch (error) {
+                    console.error('Error cargando perfiles:', error);
+                    perfilDropdown.innerHTML = '<option value="">-- Error cargando perfiles --</option>';
+                }
+            }
+
+            async function cargarCaracteristicas(modeloId, nombrePerfil) {
+                const container = document.getElementById('caracteristicas-container');
+
+                if (!modeloId || !nombrePerfil) {
+                    container.innerHTML = '<p class="text-muted">Seleccione un perfil para ver sus características</p>';
+                    return;
+                }
+
+                try {
+                    container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+
+                    const response = await fetch(`/Inventario/Formulario?handler=CaracteristicasPorPerfil&modeloId=${modeloId}&nombrePerfil=${encodeURIComponent(nombrePerfil)}`);
+                    if (!response.ok) throw new Error('Error en la respuesta');
+
+                    const caracteristicas = await response.json();
+
+                    if (caracteristicas.length > 0) {
+                        let html = '<ul class="list-group">';
+                        caracteristicas.forEach(car => {
+                            html += `<li class="list-group-item"><strong>${car.nombre}:</strong> ${car.valor}</li>`;
+                        });
+                        html += '</ul>';
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = '<p class="text-muted">No se encontraron características para este perfil</p>';
+                    }
+                } catch (error) {
+                    console.error('Error cargando características:', error);
+                    container.innerHTML = '<p class="text-danger">Error al cargar características</p>';
+                }
+            }
+
+            // Funciones existentes para cargar marcas y modelos
+            async function cargarMarcas() {
+                const tipoId = document.getElementById('tipoEquipo').value;
+                const marcaDropdown = document.getElementById('marca');
+                const modeloDropdown = document.getElementById('modelo');
+
+                if (!tipoId) {
+                    resetDropdown(marcaDropdown, '-- Seleccione un tipo primero --');
+                    resetDropdown(modeloDropdown, '-- Seleccione una marca primero --');
+                    return;
+                }
+
+                try {
+                    showLoading(marcaDropdown);
+
+                    const response = await fetch(`/Inventario/Formulario?handler=MarcasPorTipo&tipoId=${tipoId}`);
+                    if (!response.ok) throw new Error('Error en la respuesta');
+
+                    const marcas = await response.json();
+                    populateDropdown(marcaDropdown, marcas, '-- Seleccione una marca --', @Model.Equipo?.IdMarca);
+
+                    resetDropdown(modeloDropdown, '-- Seleccione una marca primero --');
+                } catch (error) {
+                    console.error('Error cargando marcas:', error);
+                    resetDropdown(marcaDropdown, '-- Error cargando marcas --');
+                }
+            }
+
+            async function cargarModelos() {
+                const marcaId = document.getElementById('marca').value;
+                const tipoId = document.getElementById('tipoEquipo').value;
+                const modeloDropdown = document.getElementById('modelo');
+
+                if (!marcaId || !tipoId) {
+                    resetDropdown(modeloDropdown, '-- Seleccione marca y tipo --');
+                    return;
+                }
+
+                try {
+                    showLoading(modeloDropdown);
+
+                    const response = await fetch(`/Inventario/Formulario?handler=ModelosPorMarcaYTipo&marcaId=${marcaId}&tipoId=${tipoId}`);
+                    if (!response.ok) throw new Error('Error en la respuesta');
+
+                    const modelos = await response.json();
+                    populateDropdown(modeloDropdown, modelos, '-- Seleccione un modelo --', @Model.Equipo?.IdModelo);
+                } catch (error) {
+                    console.error('Error cargando modelos:', error);
+                    resetDropdown(modeloDropdown, '-- Error cargando modelos --');
+                }
+            }
+
+            function populateDropdown(dropdown, items, defaultText, selectedValue) {
+                let options = `<option value="">${defaultText}</option>`;
+
+                items.forEach(item => {
+                    const selected = item.id == selectedValue ? 'selected' : '';
+                    options += `<option value="${item.id}" ${selected}>${item.nombre}</option>`;
+                });
+
+                dropdown.innerHTML = options;
+                dropdown.disabled = false;
+            }
+
+            function resetDropdown(dropdown, message) {
+                dropdown.innerHTML = `<option value="">${message}</option>`;
+                dropdown.disabled = true;
+            }
+
+            function showLoading(dropdown) {
+                dropdown.innerHTML = '<option value="">Cargando...</option>';
+                dropdown.disabled = true;
+            }
         });
-
-        async function cargarMarcas() {
-            const tipoId = document.getElementById('tipoEquipo').value;
-            const marcaDropdown = document.getElementById('marca');
-            const modeloDropdown = document.getElementById('modelo');
-
-            if (!tipoId) {
-                resetDropdown(marcaDropdown, '-- Seleccione un tipo primero --');
-                resetDropdown(modeloDropdown, '-- Seleccione una marca primero --');
-                return;
-            }
-
-            try {
-                showLoading(marcaDropdown);
-
-                const response = await fetch(`/Inventario/Formulario?handler=MarcasPorTipo&tipoId=${tipoId}`);
-                if (!response.ok) throw new Error('Error en la respuesta');
-
-                const marcas = await response.json();
-                populateDropdown(marcaDropdown, marcas, '-- Seleccione una marca --', @Model.Equipo.IdMarca);
-
-                resetDropdown(modeloDropdown, '-- Seleccione una marca primero --');
-            } catch (error) {
-                console.error('Error cargando marcas:', error);
-                resetDropdown(marcaDropdown, '-- Error cargando marcas --');
-            }
-        }
-
-        async function cargarModelos() {
-            const marcaId = document.getElementById('marca').value;
-            const tipoId = document.getElementById('tipoEquipo').value;
-            const modeloDropdown = document.getElementById('modelo');
-
-            if (!marcaId || !tipoId) {
-                resetDropdown(modeloDropdown, '-- Seleccione marca y tipo --');
-                return;
-            }
-
-            try {
-                showLoading(modeloDropdown);
-
-                const response = await fetch(`/Inventario/Formulario?handler=ModelosPorMarcaYTipo&marcaId=${marcaId}&tipoId=${tipoId}`);
-                if (!response.ok) throw new Error('Error en la respuesta');
-
-                const modelos = await response.json();
-                populateDropdown(modeloDropdown, modelos, '-- Seleccione un modelo --', @Model.Equipo.IdModelo);
-            } catch (error) {
-                console.error('Error cargando modelos:', error);
-                resetDropdown(modeloDropdown, '-- Error cargando modelos --');
-            }
-        }
-
-        function populateDropdown(dropdown, items, defaultText, selectedValue) {
-            let options = `<option value="">${defaultText}</option>`;
-
-            items.forEach(item => {
-                const selected = item.id == selectedValue ? 'selected' : '';
-                options += `<option value="${item.id}" ${selected}>${item.nombre}</option>`;
-            });
-
-            dropdown.innerHTML = options;
-            dropdown.disabled = false;
-        }
-
-        function resetDropdown(dropdown, message) {
-            dropdown.innerHTML = `<option value="">${message}</option>`;
-            dropdown.disabled = true;
-        }
-
-        function showLoading(dropdown) {
-            dropdown.innerHTML = '<option value="">Cargando...</option>';
-            dropdown.disabled = true;
-        }
     </script>
 }
