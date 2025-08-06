@@ -26,7 +26,7 @@
                 <div class="form-group">
                     <label asp-for="IdMarca" class="form-label">Marca</label>
                     <select asp-for="IdMarca" class="form-control input-beige"
-                            disabled="@esModoLectura" asp-items="Model.Marcas">
+                            id="selectMarca" disabled="@esModoLectura" asp-items="Model.Marcas">
                         <option value="">-- Seleccione marca --</option>
                     </select>
                     <span asp-validation-for="IdMarca" class="text-danger"></span>
@@ -37,7 +37,7 @@
                 <div class="form-group">
                     <label asp-for="IdTipoEquipo" class="form-label">Tipo de Equipo</label>
                     <select asp-for="IdTipoEquipo" class="form-control input-beige"
-                            disabled="@esModoLectura" asp-items="Model.TiposEquipos">
+                            id="selectTipo" disabled="@esModoLectura" asp-items="Model.TiposEquipos">
                         <option value="">-- Seleccione tipo --</option>
                     </select>
                     <span asp-validation-for="IdTipoEquipo" class="text-danger"></span>
@@ -47,10 +47,21 @@
             <div class="col-md-4">
                 <div class="form-group">
                     <label asp-for="IdModelo" class="form-label">Modelo</label>
-                    <select asp-for="IdModelo" class="form-control input-beige"
-                            disabled="@esModoLectura" asp-items="Model.Modelos">
-                        <option value="">-- Seleccione modelo --</option>
-                    </select>
+                    <div class="input-group">
+                        <select asp-for="IdModelo" class="form-control input-beige"
+                                disabled="@esModoLectura" id="selectModelo">
+                            <option value="">-- Seleccione modelo --</option>
+                        </select>
+                        @if (!esModoLectura)
+                        {
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-beige" type="button"
+                                        data-toggle="modal" data-target="#modalAgregarModelo">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
                     <span asp-validation-for="IdModelo" class="text-danger"></span>
                 </div>
             </div>
@@ -121,6 +132,50 @@
     </form>
 </div>
 
+<!-- Modal para agregar nuevo modelo -->
+<div class="modal fade" id="modalAgregarModelo" tabindex="-1" role="dialog" aria-labelledby="modalAgregarModeloLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAgregarModeloLabel">Agregar Nuevo Modelo</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="nombreModelo">Nombre del Modelo</label>
+                    <input type="text" class="form-control" id="nombreModelo" placeholder="Ej: Latitude 5420">
+                </div>
+                <div class="form-group">
+                    <label for="marcaModelo">Marca</label>
+                    <select class="form-control" id="marcaModelo">
+                        <option value="">-- Seleccione marca --</option>
+                        @foreach (var marca in Model.Marcas)
+                        {
+                            <option value="@marca.Value">@marca.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tipoModelo">Tipo de Equipo</label>
+                    <select class="form-control" id="tipoModelo">
+                        <option value="">-- Seleccione tipo --</option>
+                        @foreach (var tipo in Model.TiposEquipos)
+                        {
+                            <option value="@tipo.Value">@tipo.Text</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-beige" id="btnGuardarModelo">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <template id="caracteristica-template">
     <div class="caracteristica-item row mb-2">
         <div class="col-md-5">
@@ -162,6 +217,12 @@
             .caracteristica-item:hover {
                 background-color: #f8f9fa;
             }
+
+        .input-group-append .btn {
+            height: 38px;
+            border-color: #d2b48c;
+            color: #5a4a3a;
+        }
     </style>
 }
 
@@ -172,32 +233,99 @@
             // Objeto para rastrear características seleccionadas
             const caracteristicasSeleccionadas = new Set();
 
-            // Actualizar selecciones
-            function actualizarCaracteristicasSeleccionadas() {
-                caracteristicasSeleccionadas.clear();
+            // Función para cargar modelos basados en marca y tipo
+            async function cargarModelos() {
+                const marcaId = document.getElementById('selectMarca').value;
+                const tipoId = document.getElementById('selectTipo').value;
+                const selectModelo = document.getElementById('selectModelo');
 
-                document.querySelectorAll('.caracteristica-select').forEach(select => {
-                    if (select.value) {
-                        caracteristicasSeleccionadas.add(parseInt(select.value));
-                    }
-                });
+                if (!marcaId || !tipoId) {
+                    selectModelo.innerHTML = '<option value="">-- Seleccione marca y tipo --</option>';
+                    return;
+                }
 
-                // Actualizar opciones disponibles en todos los dropdowns
-                document.querySelectorAll('.caracteristica-select').forEach(select => {
-                    const currentValue = select.value;
-                    const currentIndex = select.dataset.index;
+                try {
+                    selectModelo.innerHTML = '<option value="">Cargando modelos...</option>';
 
-                    Array.from(select.options).forEach(option => {
-                        if (option.value === "") return;
+                    const response = await fetch(`/EquiposRegistrados/EquiposForm?handler=ModelosPorMarcaYTipo&marcaId=${marcaId}&tipoId=${tipoId}`);
+                    if (!response.ok) throw new Error('Error en la respuesta');
 
-                        const carId = parseInt(option.value);
-                        const estaSeleccionada = caracteristicasSeleccionadas.has(carId);
+                    const modelos = await response.json();
 
-                        // Ocultar opciones ya seleccionadas en otros dropdowns
-                        option.hidden = estaSeleccionada && option.value !== currentValue;
+                    let options = '<option value="">-- Seleccione modelo --</option>';
+                    modelos.forEach(modelo => {
+                        options += `<option value="${modelo.value}"
+                                          ${modelo.value == '@Model.IdModelo' ? 'selected' : ''}>
+                                        ${modelo.text}
+                                    </option>`;
                     });
-                });
+
+                    selectModelo.innerHTML = options;
+                } catch (error) {
+                    console.error('Error cargando modelos:', error);
+                    selectModelo.innerHTML = '<option value="">-- Error cargando modelos --</option>';
+                }
             }
+
+            // Eventos para cargar modelos cuando cambian marca o tipo
+            document.getElementById('selectMarca').addEventListener('change', cargarModelos);
+            document.getElementById('selectTipo').addEventListener('change', cargarModelos);
+
+            // Cargar modelos iniciales si hay valores
+            if ('@Model.IdMarca' && '@Model.IdTipoEquipo') {
+                cargarModelos();
+            }
+
+            // Manejar agregar nuevo modelo
+            document.getElementById('btnGuardarModelo').addEventListener('click', async function () {
+                const nombre = document.getElementById('nombreModelo').value;
+                const marcaId = document.getElementById('marcaModelo').value;
+                const tipoId = document.getElementById('tipoModelo').value;
+
+                if (!nombre || !marcaId || !tipoId) {
+                    alert('Por favor complete todos los campos');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/EquiposRegistrados/EquiposForm?handler=AgregarModelo', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        body: JSON.stringify({
+                            NombreModelo: nombre,
+                            MarcaId: parseInt(marcaId),
+                            TipoId: parseInt(tipoId)
+                        })
+                    });
+
+                    const resultado = await response.json();
+                    if (resultado.success) {
+                        // Agregar el nuevo modelo al dropdown
+                        const selectModelo = document.getElementById('selectModelo');
+                        const option = document.createElement('option');
+                        option.value = resultado.id;
+                        option.textContent = nombre;
+                        selectModelo.appendChild(option);
+                        selectModelo.value = resultado.id;
+
+                        // Cerrar el modal
+                        $('#modalAgregarModelo').modal('hide');
+
+                        // Limpiar el formulario
+                        document.getElementById('nombreModelo').value = '';
+                        document.getElementById('marcaModelo').selectedIndex = 0;
+                        document.getElementById('tipoModelo').selectedIndex = 0;
+                    } else {
+                        alert('Error al guardar: ' + resultado.error);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error al guardar el modelo');
+                }
+            });
 
             // Inicializar con las características existentes
             actualizarCaracteristicasSeleccionadas();
@@ -267,6 +395,32 @@
                     actualizarCaracteristicasSeleccionadas();
                 });
             });
+
+            function actualizarCaracteristicasSeleccionadas() {
+                caracteristicasSeleccionadas.clear();
+
+                document.querySelectorAll('.caracteristica-select').forEach(select => {
+                    if (select.value) {
+                        caracteristicasSeleccionadas.add(parseInt(select.value));
+                    }
+                });
+
+                // Actualizar opciones disponibles en todos los dropdowns
+                document.querySelectorAll('.caracteristica-select').forEach(select => {
+                    const currentValue = select.value;
+                    const currentIndex = select.dataset.index;
+
+                    Array.from(select.options).forEach(option => {
+                        if (option.value === "") return;
+
+                        const carId = parseInt(option.value);
+                        const estaSeleccionada = caracteristicasSeleccionadas.has(carId);
+
+                        // Ocultar opciones ya seleccionadas en otros dropdowns
+                        option.hidden = estaSeleccionada && option.value !== currentValue;
+                    });
+                });
+            }
         });
     </script>
 }

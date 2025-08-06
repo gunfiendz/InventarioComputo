@@ -66,6 +66,7 @@ namespace InventarioComputo.Pages.Inventario
         {"EtiquetaInv", "af.EtiquetaInv"},
         {"NumeroSerie", "af.NumeroSerie"},
         {"TipoEquipo", "te.TipoEquipo"},
+        {"NombrePerfil", "p.NombrePerfil"},
         {"Marca", "m.Marca"},
         {"DepartamentoEmpresa", "ISNULL(de.NombreDepartamento, 'No asignado')"},
         {"Estado", "e.Estado"},
@@ -153,7 +154,8 @@ namespace InventarioComputo.Pages.Inventario
                     var countQuery = @"
                 SELECT COUNT(*)
                 FROM ActivosFijos af
-                JOIN Modelos mo ON af.id_modelo = mo.id_modelo
+                JOIN Perfiles p ON af.id_perfil = p.id_perfil
+                JOIN Modelos mo ON p.id_modelo = mo.id_modelo
                 JOIN Marcas m ON mo.id_marca = m.id_marca
                 JOIN TiposEquipos te ON mo.id_tipoequipo = te.id_tipoequipo
                 JOIN Estados e ON af.id_estado = e.id_estado
@@ -185,13 +187,15 @@ namespace InventarioComputo.Pages.Inventario
                     af.EtiquetaInv, 
                     af.NumeroSerie,
                     te.TipoEquipo, 
+                    p.NombrePerfil,
                     m.Marca, 
                     mo.Modelo,
                     ISNULL(de.NombreDepartamento, 'No asignado') AS Departamento, 
                     e.Estado,
                     ISNULL(emp.Nombre, 'No asignado') AS AsignadoA
                 FROM ActivosFijos af
-                JOIN Modelos mo ON af.id_modelo = mo.id_modelo
+                JOIN Perfiles p on af.id_perfil = p.id_perfil
+                JOIN Modelos mo ON p.id_modelo = mo.id_modelo
                 JOIN Marcas m ON mo.id_marca = m.id_marca
                 JOIN TiposEquipos te ON mo.id_tipoequipo = te.id_tipoequipo
                 JOIN Estados e ON af.id_estado = e.id_estado
@@ -228,11 +232,12 @@ namespace InventarioComputo.Pages.Inventario
                                 EtiquetaInv = reader.GetString(1),
                                 NumeroSerie = reader.GetString(2),
                                 TipoEquipo = reader.GetString(3),
-                                Marca = reader.GetString(4),
-                                Modelo = reader.GetString(5),
-                                DepartamentoEmpresa = reader.GetString(6),
-                                Estado = reader.GetString(7),
-                                AsignadoA = reader.GetString(8)
+                                NombrePerfil = reader.GetString(4),
+                                Marca = reader.GetString(5),
+                                Modelo = reader.GetString(6),
+                                DepartamentoEmpresa = reader.GetString(7),
+                                Estado = reader.GetString(8),
+                                AsignadoA = reader.GetString(9)
                             };
                             Equipos.Add(equipo);
                         }
@@ -251,6 +256,7 @@ namespace InventarioComputo.Pages.Inventario
             public string EtiquetaInv { get; set; }
             public string NumeroSerie { get; set; }
             public string TipoEquipo { get; set; }
+            public string NombrePerfil {  get; set; }
             public string Marca { get; set; }
             public string Modelo { get; set; }
             public string DepartamentoEmpresa { get; set; }

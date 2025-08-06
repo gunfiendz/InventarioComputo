@@ -47,8 +47,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Marca</label>
-                    <select class="form-control input-beige" id="marca">
+                    <label asp-for="Equipo.IdMarca" class="form-label">Marca</label>
+                    <select asp-for="Equipo.IdMarca" class="form-control input-beige" id="marca">
                         @if (Model.Equipo?.IdMarca.HasValue == true && Model.Marcas?.Any() == true)
                         {
                             <option value="@Model.Equipo.IdMarca" selected>
@@ -60,6 +60,7 @@
                             <option value="">-- Seleccione un tipo primero --</option>
                         }
                     </select>
+                    <span asp-validation-for="Equipo.IdMarca" class="text-danger"></span>
                 </div>
 
                 <div class="form-group">
@@ -81,26 +82,21 @@
 
                 <!-- Nuevo campo para selección de perfil -->
                 <div class="form-group">
-                    <label asp-for="Equipo.NombrePerfil" class="form-label">Perfil del Modelo</label>
-                    <select asp-for="Equipo.NombrePerfil" class="form-control input-beige"
-                            id="perfil" disabled="@(Model.Modo == "Ver")">
+                    <label asp-for="Equipo.IdPerfil" class="form-label">Perfil del Modelo</label>
+                    <select asp-for="Equipo.IdPerfil" class="form-control input-beige" id="perfil"
+                            disabled="@(Model.Modo == "Ver")">
                         @if (Model.Perfiles?.Any() == true)
                         {
-                            <option value="">-- Seleccione un perfil --</option>
-                            @foreach (var perfil in Model.Perfiles)
-                            {
-                                <option value="@perfil"
-                                        selected="@(perfil == Model.Equipo?.NombrePerfil)">
-                                    @perfil
-                                </option>
-                            }
+                            <option value="@Model.Equipo.IdPerfil" selected>
+                                @Model.Perfiles.First(m => m.Id == Model.Equipo.IdPerfil).Nombre
+                            </option>
                         }
                         else
                         {
                             <option value="">-- No hay perfiles disponibles --</option>
                         }
                     </select>
-                    <span asp-validation-for="Equipo.NombrePerfil" class="text-danger"></span>
+                    <span asp-validation-for="Equipo.IdPerfil" class="text-danger"></span>
                 </div>
 
                 <div class="form-group">
@@ -141,11 +137,11 @@
                     <h5>Características del Perfil</h5>
                 </div>
                 <div class="card-body" id="caracteristicas-container">
-                    @if (!string.IsNullOrEmpty(Model.Equipo?.NombrePerfil))
+                    @if (Model.Equipo?.IdPerfil > 0)
                     {
-                        <ul class="list-group">
-                            <!-- Las características se cargarán dinámicamente via AJAX -->
-                        </ul>
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin"></i> Cargando características...
+                        </div>
                     }
                     else
                     {
@@ -161,49 +157,30 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const esModoLectura = '@Model.Modo' === 'Ver';
-            const modeloId = @Model.Equipo?.IdModelo;
             const perfilSelect = document.getElementById('perfil');
 
+            // Configurar eventos para los dropdowns
             if (!esModoLectura) {
-                // Configurar eventos para los dropdowns
                 document.getElementById('tipoEquipo').addEventListener('change', cargarMarcas);
                 document.getElementById('marca').addEventListener('change', cargarModelos);
-
-                // Evento para cuando cambia el modelo
-                document.getElementById('modelo').addEventListener('change', function () {
-                    const nuevoModeloId = this.value;
-                    cargarPerfiles(nuevoModeloId);
-
-                    // Limpiar características
-                    document.getElementById('caracteristicas-container').innerHTML =
-                        '<p class="text-muted">Seleccione un perfil para ver sus características</p>';
-                });
-
-                // Evento para cuando cambia el perfil
+                document.getElementById('modelo').addEventListener('change', cargarPerfiles);
                 perfilSelect.addEventListener('change', function () {
-                    cargarCaracteristicas(modeloId, this.value);
+                    cargarCaracteristicas(this.value);
                 });
-
-                // Cargar datos iniciales si es necesario
-                if (document.getElementById('tipoEquipo').value) {
-                    cargarMarcas().then(() => {
-                        if (document.getElementById('marca').value) {
-                            cargarModelos().then(() => {
-                                if (document.getElementById('modelo').value) {
-                                    cargarPerfiles(modeloId);
-                                }
-                            });
-                        }
-                    });
-                }
-            } else {
-                // Si es modo lectura, cargar características del perfil seleccionado
-                if (perfilSelect.value) {
-                    cargarCaracteristicas(modeloId, perfilSelect.value);
-                }
             }
 
-            async function cargarPerfiles(modeloId) {
+            // Cargar datos iniciales
+            if (document.getElementById('tipoEquipo').value) {
+                cargarMarcas();
+            }
+
+            // Si es modo lectura, cargar características del perfil seleccionado
+            if (esModoLectura && perfilSelect.value) {
+                cargarCaracteristicas(perfilSelect.value);
+            }
+
+            async function cargarPerfiles() {
+                const modeloId = document.getElementById('modelo').value;
                 const perfilDropdown = document.getElementById('perfil');
 
                 if (!modeloId) {
@@ -214,16 +191,19 @@
 
                 try {
                     perfilDropdown.innerHTML = '<option value="">Cargando perfiles...</option>';
+                    perfilDropdown.disabled = true;
 
                     const response = await fetch(`/Inventario/Formulario?handler=PerfilesPorModelo&modeloId=${modeloId}`);
                     if (!response.ok) throw new Error('Error en la respuesta');
 
                     const perfiles = await response.json();
 
+                    const perfilIdActual = @(Model.Equipo?.IdPerfil ?? 0);
                     let options = '<option value="">-- Seleccione un perfil --</option>';
+
                     perfiles.forEach(perfil => {
-                        const selected = perfil === '@Model.Equipo?.NombrePerfil' ? 'selected' : '';
-                        options += `<option value="${perfil}" ${selected}>${perfil}</option>`;
+                        const selected = perfil.id == perfilIdActual ? 'selected' : '';
+                        options += `<option value="${perfil.id}" ${selected}>${perfil.nombre}</option>`;
                     });
 
                     perfilDropdown.innerHTML = options;
@@ -231,18 +211,19 @@
 
                     // Si hay un perfil seleccionado, cargar sus características
                     if (perfilSelect.value) {
-                        cargarCaracteristicas(modeloId, perfilSelect.value);
+                        cargarCaracteristicas(perfilSelect.value);
                     }
                 } catch (error) {
                     console.error('Error cargando perfiles:', error);
                     perfilDropdown.innerHTML = '<option value="">-- Error cargando perfiles --</option>';
+                    perfilDropdown.disabled = false;
                 }
             }
 
-            async function cargarCaracteristicas(modeloId, nombrePerfil) {
+            async function cargarCaracteristicas(perfilId) {
                 const container = document.getElementById('caracteristicas-container');
 
-                if (!modeloId || !nombrePerfil) {
+                if (!perfilId) {
                     container.innerHTML = '<p class="text-muted">Seleccione un perfil para ver sus características</p>';
                     return;
                 }
@@ -250,10 +231,106 @@
                 try {
                     container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
 
-                    const response = await fetch(`/Inventario/Formulario?handler=CaracteristicasPorPerfil&modeloId=${modeloId}&nombrePerfil=${encodeURIComponent(nombrePerfil)}`);
+                    const response = await fetch(`/Inventario/Formulario?handler=CaracteristicasPorPerfil&perfilId=${perfilId}`);
                     if (!response.ok) throw new Error('Error en la respuesta');
 
                     const caracteristicas = await response.json();
+
+                    if (caracteristicas.length > 0) {
+                        let html = '<ul class="list-group">';
+                        caracteristicas.forEach(car => {
+                            html += `<li class="list-group-item"><strong>${car.Nombre}:</strong> ${car.Valor}</li>`;
+                        });
+                        html += '</ul>';
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = '<p class="text-muted">No se encontraron características para este perfil</p>';
+                    }
+                } catch (error) {
+                    console.error('Error cargando características:', error);
+                    container.innerHTML = '<p class="text-danger">Error al cargar características</p>';
+                }
+            }
+
+            // Funciones para cargar marcas y modelos
+            async function cargarMarcas() {
+                const tipoId = document.getElementById('tipoEquipo').value;
+                const marcaDropdown = document.getElementById('marca');
+                const modeloDropdown = document.getElementById('modelo');
+                const perfilDropdown = document.getElementById('perfil');
+
+                if (!tipoId) {
+                    resetDropdown(marcaDropdown, '-- Seleccione un tipo primero --');
+                    resetDropdown(modeloDropdown, '-- Seleccione una marca primero --');
+                    resetDropdown(perfilDropdown, '-- Seleccione un modelo primero --');
+                    return;
+                }
+
+                try {
+                    showLoading(marcaDropdown);
+                    resetDropdown(modeloDropdown, '-- Seleccione una marca primero --');
+                    resetDropdown(perfilDropdown, '-- Seleccione un modelo primero --');
+
+                    const response = await fetch(`/Inventario/Formulario?handler=MarcasPorTipo&tipoId=${tipoId}`);
+                    if (!response.ok) throw new Error('Error en la respuesta');
+
+                    const marcas = await response.json();
+                    populateDropdown(marcaDropdown, marcas, '-- Seleccione una marca --', @(Model.Equipo?.IdMarca ?? 0));
+
+                } catch (error) {
+                    console.error('Error cargando marcas:', error);
+                    resetDropdown(marcaDropdown, '-- Error cargando marcas --');
+                }
+            }
+
+            async function cargarModelos() {
+                const marcaId = document.getElementById('marca').value;
+                const tipoId = document.getElementById('tipoEquipo').value;
+                const modeloDropdown = document.getElementById('modelo');
+                const perfilDropdown = document.getElementById('perfil');
+
+                if (!marcaId || !tipoId) {
+                    resetDropdown(modeloDropdown, '-- Seleccione marca y tipo --');
+                    resetDropdown(perfilDropdown, '-- Seleccione un modelo primero --');
+                    return;
+                }
+
+                try {
+                    showLoading(modeloDropdown);
+                    resetDropdown(perfilDropdown, '-- Seleccione un modelo primero --');
+
+                    const response = await fetch(`/Inventario/Formulario?handler=ModelosPorMarcaYTipo&marcaId=${marcaId}&tipoId=${tipoId}`);
+                    if (!response.ok) throw new Error('Error en la respuesta');
+
+                    const modelos = await response.json();
+                    populateDropdown(modeloDropdown, modelos, '-- Seleccione un modelo --', @(Model.Equipo?.IdModelo ?? 0));
+
+                    // Cargar perfiles si hay un modelo seleccionado
+                    if (modeloDropdown.value) {
+                        cargarPerfiles();
+                    }
+                } catch (error) {
+                    console.error('Error cargando modelos:', error);
+                    resetDropdown(modeloDropdown, '-- Error cargando modelos --');
+                }
+            }
+
+            async function cargarCaracteristicas(perfilId) {
+                const container = document.getElementById('caracteristicas-container');
+
+                if (!perfilId) {
+                    container.innerHTML = '<p class="text-muted">Seleccione un perfil para ver sus características</p>';
+                    return;
+                }
+
+                try {
+                    container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+
+                    const response = await fetch(`/Inventario/Formulario?handler=CaracteristicasPorPerfil&perfilId=${perfilId}`);
+                    if (!response.ok) throw new Error('Error en la respuesta');
+
+                    const caracteristicas = await response.json();
+                    console.log('Características recibidas:', caracteristicas); // Para depuración
 
                     if (caracteristicas.length > 0) {
                         let html = '<ul class="list-group">';
@@ -268,58 +345,6 @@
                 } catch (error) {
                     console.error('Error cargando características:', error);
                     container.innerHTML = '<p class="text-danger">Error al cargar características</p>';
-                }
-            }
-
-            // Funciones existentes para cargar marcas y modelos
-            async function cargarMarcas() {
-                const tipoId = document.getElementById('tipoEquipo').value;
-                const marcaDropdown = document.getElementById('marca');
-                const modeloDropdown = document.getElementById('modelo');
-
-                if (!tipoId) {
-                    resetDropdown(marcaDropdown, '-- Seleccione un tipo primero --');
-                    resetDropdown(modeloDropdown, '-- Seleccione una marca primero --');
-                    return;
-                }
-
-                try {
-                    showLoading(marcaDropdown);
-
-                    const response = await fetch(`/Inventario/Formulario?handler=MarcasPorTipo&tipoId=${tipoId}`);
-                    if (!response.ok) throw new Error('Error en la respuesta');
-
-                    const marcas = await response.json();
-                    populateDropdown(marcaDropdown, marcas, '-- Seleccione una marca --', @Model.Equipo?.IdMarca);
-
-                    resetDropdown(modeloDropdown, '-- Seleccione una marca primero --');
-                } catch (error) {
-                    console.error('Error cargando marcas:', error);
-                    resetDropdown(marcaDropdown, '-- Error cargando marcas --');
-                }
-            }
-
-            async function cargarModelos() {
-                const marcaId = document.getElementById('marca').value;
-                const tipoId = document.getElementById('tipoEquipo').value;
-                const modeloDropdown = document.getElementById('modelo');
-
-                if (!marcaId || !tipoId) {
-                    resetDropdown(modeloDropdown, '-- Seleccione marca y tipo --');
-                    return;
-                }
-
-                try {
-                    showLoading(modeloDropdown);
-
-                    const response = await fetch(`/Inventario/Formulario?handler=ModelosPorMarcaYTipo&marcaId=${marcaId}&tipoId=${tipoId}`);
-                    if (!response.ok) throw new Error('Error en la respuesta');
-
-                    const modelos = await response.json();
-                    populateDropdown(modeloDropdown, modelos, '-- Seleccione un modelo --', @Model.Equipo?.IdModelo);
-                } catch (error) {
-                    console.error('Error cargando modelos:', error);
-                    resetDropdown(modeloDropdown, '-- Error cargando modelos --');
                 }
             }
 

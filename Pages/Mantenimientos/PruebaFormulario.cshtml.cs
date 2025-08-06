@@ -109,10 +109,12 @@ namespace InventarioComputo.Pages.Mantenimientos
                     SELECT 
                         af.id_activofijo, 
                         af.EtiquetaInv, 
+                        p.NombrePerfil,
                         mo.Modelo,
                         m.Marca
                     FROM ActivosFijos af
-                    JOIN Modelos mo ON af.id_modelo = mo.id_modelo
+                    JOIN Perfiles p ON af.id_perfil = p.id_perfil
+                    JOIN Modelos mo ON p.id_modelo = mo.id_modelo
                     JOIN Marcas m ON mo.id_marca = m.id_marca
                     WHERE af.id_estado = (SELECT id_estado FROM Estados WHERE Estado = 'Activo')
                     ORDER BY af.EtiquetaInv";
@@ -127,8 +129,9 @@ namespace InventarioComputo.Pages.Mantenimientos
                         {
                             Id = reader.GetInt32(0),
                             EtiquetaInv = reader.GetString(1),
-                            Modelo = reader.GetString(2),
-                            Marca = reader.GetString(3)
+                            NombrePerfil = reader.GetString(2),
+                            Modelo = reader.GetString(3),
+                            Marca = reader.GetString(4)
                         });
                     }
                 }
@@ -298,6 +301,7 @@ namespace InventarioComputo.Pages.Mantenimientos
         {
             public int Id { get; set; }
             public string EtiquetaInv { get; set; }
+            public string NombrePerfil {  get; set; }
             public string Modelo { get; set; }
             public string Marca { get; set; }
         }

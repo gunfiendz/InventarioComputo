@@ -17,7 +17,7 @@ public class FormularioModel : PageModel
     public List<TipoEquipo> TiposEquipos { get; set; } = new List<TipoEquipo>();
     public List<Marca> Marcas { get; set; } = new List<Marca>();
     public List<ModeloInfo> Modelos { get; set; } = new List<ModeloInfo>();
-    public List<string> Perfiles { get; set; } = new List<string>();
+    public List<PerfilInfo> Perfiles { get; set; } = new List<PerfilInfo>();
     public string Modo { get; set; } = "Crear"; // Puede ser "Crear", "Editar" o "Ver"
 
     public FormularioModel(ConexionBDD dbConnection)
@@ -62,7 +62,7 @@ public class FormularioModel : PageModel
                         // Cargar perfiles para el modelo seleccionado
                         if (Equipo.IdModelo > 0)
                         {
-                            Perfiles = await ObtenerPerfilesPorModelo(Equipo.IdModelo);
+                            Perfiles = await ObtenerPerfilesPorModelo(Equipo.IdModelo.Value);
                         }
                     }
                 }
@@ -85,10 +85,11 @@ public class FormularioModel : PageModel
                 SELECT 
                     af.id_activofijo, af.NumeroSerie, af.EtiquetaInv, 
                     af.FechaCompra, af.Garantia, af.id_estado,
-                    mo.id_modelo, mo.id_marca, mo.id_tipoequipo,
-                    mo.NombrePerfil  -- Nueva columna para el perfil
+                    p.id_perfil, p.NombrePerfil,
+                    p.id_modelo, mo.id_marca, mo.id_tipoequipo
                 FROM ActivosFijos af
-                JOIN Modelos mo ON af.id_modelo = mo.id_modelo
+                JOIN Perfiles p ON af.id_perfil = p.id_perfil
+                JOIN Modelos mo ON p.id_modelo = mo.id_modelo
                 WHERE af.id_activofijo = @Id";
 
             var command = new SqlCommand(query, connection);
@@ -106,10 +107,11 @@ public class FormularioModel : PageModel
                         FechaCompra = reader.GetDateTime(3),
                         Garantia = reader.IsDBNull(4) ? null : reader.GetString(4),
                         IdEstado = reader.GetInt32(5),
-                        IdModelo = reader.GetInt32(6),
-                        IdMarca = reader.GetInt32(7),
-                        IdTipoEquipo = reader.GetInt32(8),
-                        NombrePerfil = reader.IsDBNull(9) ? null : reader.GetString(9) // Nuevo campo
+                        IdPerfil = reader.GetInt32(6),
+                        NombrePerfil = reader.GetString(7),
+                        IdModelo = reader.GetInt32(8),
+                        IdMarca = reader.GetInt32(9),
+                        IdTipoEquipo = reader.GetInt32(10)
                     };
                 }
             }
@@ -188,7 +190,7 @@ public class FormularioModel : PageModel
         using (var connection = await _dbConnection.GetConnectionAsync())
         {
             var query = @"
-                SELECT id_modelo, Modelo 
+                SELECT DISTINCT id_modelo, Modelo 
                 FROM Modelos
                 WHERE id_marca = @MarcaId AND id_tipoequipo = @TipoId
                 ORDER BY Modelo";
@@ -213,12 +215,12 @@ public class FormularioModel : PageModel
     }
 
     // Nuevo método para obtener perfiles por modelo
-    private async Task<List<string>> ObtenerPerfilesPorModelo(int modeloId)
+    private async Task<List<PerfilInfo>> ObtenerPerfilesPorModelo(int modeloId)
     {
-        var perfiles = new List<string>();
+        var perfiles = new List<PerfilInfo>();
         using (var connection = await _dbConnection.GetConnectionAsync())
         {
-            var query = "SELECT DISTINCT NombrePerfil FROM Modelos WHERE id_modelo = @ModeloId AND NombrePerfil IS NOT NULL";
+            var query = "SELECT id_perfil, NombrePerfil FROM Perfiles WHERE id_modelo = @ModeloId AND NombrePerfil IS NOT NULL";
             var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@ModeloId", modeloId);
 
@@ -226,10 +228,11 @@ public class FormularioModel : PageModel
             {
                 while (await reader.ReadAsync())
                 {
-                    if (!reader.IsDBNull(0))
+                    perfiles.Add(new PerfilInfo
                     {
-                        perfiles.Add(reader.GetString(0));
-                    }
+                        Id = reader.GetInt32(0),
+                        Nombre = reader.GetString(1)
+                    });
                 }
             }
         }
@@ -239,17 +242,23 @@ public class FormularioModel : PageModel
     public async Task<JsonResult> OnGetMarcasPorTipo(int tipoId)
     {
         var marcas = await ObtenerMarcasPorTipo(tipoId);
-        return new JsonResult(marcas);
+        return new JsonResult(marcas.Select(m => new {
+            id = m.Id,
+            nombre = m.Nombre
+        }));
     }
 
     public async Task<JsonResult> OnGetModelosPorMarcaYTipo(int marcaId, int tipoId)
     {
         var modelos = await ObtenerModelosPorMarcaYTipo(marcaId, tipoId);
-        return new JsonResult(modelos);
+        return new JsonResult(modelos.Select(m => new {
+            id = m.Id,
+            nombre = m.Nombre
+        }));
     }
 
     // Nuevo método para obtener características por perfil
-    public async Task<JsonResult> OnGetCaracteristicasPorPerfil(int modeloId, string nombrePerfil)
+    public async Task<JsonResult> OnGetCaracteristicasPorPerfil(int perfilId)
     {
         var caracteristicas = new List<CaracteristicaViewModel>();
         using (var connection = await _dbConnection.GetConnectionAsync())
@@ -258,11 +267,10 @@ public class FormularioModel : PageModel
                 SELECT c.Caracteristica, cm.Valor 
                 FROM CaracteristicasModelos cm
                 JOIN Caracteristicas c ON cm.id_caracteristica = c.id_caracteristica
-                WHERE cm.id_modelo = @ModeloId AND cm.NombrePerfil = @NombrePerfil";
+                WHERE cm.id_perfil = @PerfilId";
 
             var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@ModeloId", modeloId);
-            command.Parameters.AddWithValue("@NombrePerfil", nombrePerfil);
+            command.Parameters.AddWithValue("@PerfilId", perfilId);
 
             using (var reader = await command.ExecuteReaderAsync())
             {
@@ -276,14 +284,20 @@ public class FormularioModel : PageModel
                 }
             }
         }
-        return new JsonResult(caracteristicas);
+        return new JsonResult(caracteristicas.Select(c => new {
+            nombre = c.Nombre,
+            valor = c.Valor
+        }));
     }
 
     // Nuevo método para obtener perfiles (usado por AJAX)
     public async Task<JsonResult> OnGetPerfilesPorModelo(int modeloId)
     {
         var perfiles = await ObtenerPerfilesPorModelo(modeloId);
-        return new JsonResult(perfiles);
+        return new JsonResult(perfiles.Select(p => new {
+            id = p.Id,
+            nombre = p.Nombre
+        }));
     }
 
     private async Task<int> ObtenerEstadoActivo()
@@ -315,44 +329,41 @@ public class FormularioModel : PageModel
                 {
                     query = @"
                         INSERT INTO ActivosFijos (
-                            id_modelo, 
+                            id_perfil, 
                             NumeroSerie, 
                             EtiquetaInv, 
                             FechaCompra, 
                             Garantia, 
-                            id_estado,
-                            NombrePerfil  -- Nuevo campo
+                            id_estado
                         ) VALUES (
-                            @IdModelo, 
+                            @IdPerfil, 
                             @NumeroSerie, 
                             @EtiquetaInv, 
                             @FechaCompra, 
                             @Garantia, 
-                            @IdEstado,
-                            @NombrePerfil)";  // Nuevo parámetro
+                            @IdEstado)";
+
                 }
                 else // Actualizar existente
                 {
                     query = @"
                         UPDATE ActivosFijos SET
-                            id_modelo = @IdModelo, 
+                            id_perfil = @IdPerfil, 
                             NumeroSerie = @NumeroSerie, 
                             EtiquetaInv = @EtiquetaInv, 
                             FechaCompra = @FechaCompra, 
                             Garantia = @Garantia, 
-                            id_estado = @IdEstado,
-                            NombrePerfil = @NombrePerfil  -- Nuevo campo
+                            id_estado = @IdEstado
                         WHERE id_activofijo = @IdActivoFijo";
                 }
 
                 var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@IdModelo", Equipo.IdModelo);
+                command.Parameters.AddWithValue("@IdPerfil", Equipo.IdPerfil);
                 command.Parameters.AddWithValue("@NumeroSerie", Equipo.NumeroSerie);
                 command.Parameters.AddWithValue("@EtiquetaInv", Equipo.EtiquetaInv);
                 command.Parameters.AddWithValue("@FechaCompra", Equipo.FechaCompra);
                 command.Parameters.AddWithValue("@Garantia", Equipo.Garantia ?? (object)DBNull.Value);
                 command.Parameters.AddWithValue("@IdEstado", Equipo.IdEstado);
-                command.Parameters.AddWithValue("@NombrePerfil", Equipo.NombrePerfil ?? (object)DBNull.Value);  // Nuevo parámetro
 
                 if (Equipo.IdActivoFijo > 0)
                 {
@@ -389,10 +400,12 @@ public class FormularioModel : PageModel
         [Display(Name = "Tipo de Equipo")]
         public int? IdTipoEquipo { get; set; }
 
+        [Display(Name = "Marca")]
         public int? IdMarca { get; set; }
 
+        public int? IdModelo { get; set; }
         [Required(ErrorMessage = "Debe seleccionar un modelo")]
-        public int IdModelo { get; set; }
+        public int IdPerfil { get; set; }
 
         [Required(ErrorMessage = "La fecha de compra es requerida")]
         [Display(Name = "Fecha de Compra")]
@@ -406,9 +419,9 @@ public class FormularioModel : PageModel
         [Required]
         public int IdEstado { get; set; }
 
-        // Nuevo campo para el perfil
-        [Display(Name = "Perfil del Modelo")]
-        public string? NombrePerfil { get; set; }
+        [Display(Name = "Perfil")]
+        public string? NombrePerfil { get; set; }  // Nueva propiedad
+
     }
 
     public class TipoEquipo
@@ -429,10 +442,16 @@ public class FormularioModel : PageModel
         public string Nombre { get; set; }
     }
 
+    public class PerfilInfo
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+    }
+
     // Nueva clase para características
     public class CaracteristicaViewModel
     {
         public string Nombre { get; set; }
         public string Valor { get; set; }
     }
-}   
+}

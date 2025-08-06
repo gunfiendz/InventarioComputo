@@ -46,7 +46,7 @@ namespace InventarioComputo.Pages.EquiposRegistrados
             // Validar columnas
             var columnasValidas = new Dictionary<string, string>
             {
-                {"NombrePerfil", "m.NombrePerfil"},
+                {"NombrePerfil", "p.NombrePerfil"},
                 {"Modelo", "m.Modelo"},
                 {"Marca", "ma.Marca"},
                 {"Tipo", "te.TipoEquipo"}
@@ -108,22 +108,23 @@ namespace InventarioComputo.Pages.EquiposRegistrados
         {
             var query = $@"
                 SELECT 
-                    m.id_modelo,
-                    m.NombrePerfil as 'Nombre del Perfil',
+                    p.id_perfil,
+                    p.NombrePerfil as 'Nombre del Perfil',
                     m.Modelo,
                     ma.Marca,
                     te.TipoEquipo,
                     STRING_AGG(c.Caracteristica + ': ' + cm.Valor, ', ') AS Caracteristicas,
                     COUNT(*) OVER() AS TotalRegistros
-                FROM Modelos m
+                FROM Perfiles p
+                JOIN Modelos m ON p.id_modelo = m.id_modelo
                 JOIN Marcas ma ON m.id_marca = ma.id_marca
                 JOIN TiposEquipos te ON m.id_tipoequipo = te.id_tipoequipo
-                LEFT JOIN CaracteristicasModelos cm ON m.id_modelo = cm.id_modelo
+                LEFT JOIN CaracteristicasModelos cm ON p.id_perfil = cm.id_perfil
                 LEFT JOIN Caracteristicas c ON cm.id_caracteristica = c.id_caracteristica
                 WHERE (@Tipo IS NULL OR m.id_tipoequipo = @Tipo)
                 AND (@Marca IS NULL OR m.id_marca = @Marca)
                 AND (@Busqueda = '' OR m.Modelo LIKE '%' + @Busqueda + '%' OR ma.Marca LIKE '%' + @Busqueda + '%')
-                GROUP BY m.id_modelo, m.NombrePerfil, m.Modelo, ma.Marca, te.TipoEquipo
+                GROUP BY p.id_perfil, p.NombrePerfil, m.Modelo, ma.Marca, te.TipoEquipo
                 ORDER BY {sortColumn} {SortDirection}
                 OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 

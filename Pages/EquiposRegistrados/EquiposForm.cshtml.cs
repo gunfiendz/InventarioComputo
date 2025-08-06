@@ -104,20 +104,6 @@ namespace InventarioComputo.Pages.EquiposRegistrados
                         }
                     }
 
-                    // Cargar modelos
-                    var cmdModelos = new SqlCommand("SELECT id_modelo, Modelo FROM Modelos", connection);
-                    using (var reader = await cmdModelos.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            Modelos.Add(new SelectListItem
-                            {
-                                Value = reader.GetInt32(0).ToString(),
-                                Text = reader.GetString(1)
-                            });
-                        }
-                    }
-
                     // Cargar todas las características disponibles
                     var cmdCaracteristicas = new SqlCommand(
                         "SELECT id_caracteristica, Caracteristica FROM Caracteristicas",
@@ -198,6 +184,72 @@ namespace InventarioComputo.Pages.EquiposRegistrados
             }
         }
 
+        public async Task<JsonResult> OnGetModelosPorMarcaYTipo(int marcaId, int tipoId)
+        {
+            var modelos = new List<SelectListItem>();
+            try
+            {
+                using (var connection = await _dbConnection.GetConnectionAsync())
+                {
+                    var cmd = new SqlCommand(
+                        "SELECT DISTINCT id_modelo, Modelo FROM Modelos " +
+                        "WHERE id_marca = @MarcaId AND id_tipoequipo = @TipoId",
+                        connection);
+                    cmd.Parameters.AddWithValue("@MarcaId", marcaId);
+                    cmd.Parameters.AddWithValue("@TipoId", tipoId);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            modelos.Add(new SelectListItem
+                            {
+                                Value = reader.GetInt32(0).ToString(),
+                                Text = reader.GetString(1)
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cargando modelos: {ex}");
+            }
+            return new JsonResult(modelos);
+        }
+
+        public async Task<JsonResult> OnPostAgregarModelo([FromBody] NuevoModeloRequest request)
+        {
+            try
+            {
+                using (var connection = await _dbConnection.GetConnectionAsync())
+                {
+                    var cmd = new SqlCommand(
+                        "INSERT INTO Modelos (Modelo, id_marca, id_tipoequipo) " +
+                        "OUTPUT INSERTED.id_modelo " +
+                        "VALUES (@Modelo, @MarcaId, @TipoId)",
+                        connection);
+
+                    cmd.Parameters.AddWithValue("@Modelo", request.NombreModelo);
+                    cmd.Parameters.AddWithValue("@MarcaId", request.MarcaId);
+                    cmd.Parameters.AddWithValue("@TipoId", request.TipoId);
+
+                    var nuevoId = (int)await cmd.ExecuteScalarAsync();
+
+                    return new JsonResult(new
+                    {
+                        success = true,
+                        id = nuevoId,
+                        nombre = request.NombreModelo
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, error = ex.Message });
+            }
+        }
+
         public async Task<IActionResult> OnPostAsync()
         {
             if (!ModelState.IsValid)
@@ -229,8 +281,8 @@ namespace InventarioComputo.Pages.EquiposRegistrados
                             {
                                 var cmdInsert = new SqlCommand(
                                     "INSERT INTO Perfiles (NombrePerfil, id_modelo) " +
-                                    "OUTPUT INSERTED.id_perfil " +
-                                    "VALUES (@NombrePerfil, @IdModelo)",
+                                    "VALUES (@NombrePerfil, @IdModelo); " +
+                                    "SELECT SCOPE_IDENTITY();",  // Cambio clave aquí
                                     connection, transaction);
 
                                 cmdInsert.Parameters.AddWithValue("@NombrePerfil", NombrePerfil);
@@ -239,7 +291,7 @@ namespace InventarioComputo.Pages.EquiposRegistrados
                                 var result = await cmdInsert.ExecuteScalarAsync();
                                 if (result != null)
                                 {
-                                    Id = (int)result;
+                                    Id = Convert.ToInt32(result);  // Convertir a int
                                     Console.WriteLine($"Nuevo perfil creado con ID: {Id}");
                                 }
                                 else
@@ -342,6 +394,13 @@ namespace InventarioComputo.Pages.EquiposRegistrados
         {
             public int Id { get; set; }
             public string Nombre { get; set; }
+        }
+
+        public class NuevoModeloRequest
+        {
+            public string NombreModelo { get; set; }
+            public int MarcaId { get; set; }
+            public int TipoId { get; set; }
         }
     }
 }
