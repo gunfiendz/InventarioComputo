@@ -8,9 +8,8 @@
 <div class="inventario-container">
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-laptop"></i> @ViewData["Title"]</h1>
-        <!-- En EquiposRegistrados/Index.cshtml -->
         <a asp-page="EquiposForm" asp-route-handler="Crear" class="btn btn-beige">
-            <i class="fas fa-plus"></i> Nuevo Modelo
+            <i class="fas fa-plus"></i> Nuevo Perfil
         </a>
     </div>
 
@@ -53,7 +52,7 @@
         <table class="table table-hover table-beige sortable-table">
             <thead>
                 <tr>
-                    <th data-sort-column="NombrePefil">
+                    <th data-sort-column="NombrePerfil">
                         <a href="#" class="sort-link">
                             Nombre del Perfil
                             @if (Model.SortColumn == "NombrePerfil")
@@ -126,7 +125,7 @@
                             </ul>
                         </td>
                         <td class="acciones">
-                            <a asp-page="EditarModelo" asp-route-id="@modelo.Id" class="btn btn-action" title="Editar">
+                            <a href="/EquiposRegistrados/EquiposForm/Editar/@modelo.Id" class="btn btn-action" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <button class="btn btn-action btn-eliminar"
@@ -153,7 +152,6 @@
                     $"&tipo={Model.TipoFilter}" +
                     $"&marca={Model.MarcaFilter}" +
                     $"&busqueda={Model.BusquedaFilter}";
-
                     <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
                         <a class="page-link" href="@url">@i</a>
                     </li>
@@ -163,7 +161,6 @@
     </div>
 </div>
 
-<!-- Modal de confirmación -->
 <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -172,11 +169,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                ¿Está seguro que desea eliminar el modelo: <strong id="modeloEliminar"></strong>?
+                ¿Está seguro que desea eliminar el perfil: <strong id="perfilAEliminar"></strong>?
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" id="btn-confirmar-eliminar">Eliminar</button>
+                <form method="post" asp-page-handler="Delete" id="formEliminar">
+                    <input type="hidden" name="id" id="idPerfilAEliminar" />
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
             </div>
         </div>
     </div>
@@ -199,16 +199,17 @@
 }
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Ordenamiento
+        // Lógica para el ordenamiento de las tablas (si no está en otro archivo)
         document.querySelectorAll('.sort-link').forEach(link => {
             link.addEventListener('click', function (e) {
                 e.preventDefault();
                 const column = this.closest('th').dataset.sortColumn;
-                const currentOrder = '@Model.SortDirection';
+                const url = new URL(window.location.href);
+                const currentOrder = url.searchParams.get('sortDirection') || 'DESC';
                 const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
 
-                const url = new URL(window.location.href);
                 url.searchParams.set('sortColumn', column);
                 url.searchParams.set('sortDirection', newOrder);
                 url.searchParams.set('pagina', '1');
@@ -217,43 +218,7 @@
             });
         });
 
-        // Eliminación
-        let modeloAEliminar = null;
-        document.querySelectorAll('.btn-eliminar').forEach(btn => {
-            btn.addEventListener('click', function () {
-                modeloAEliminar = {
-                    id: this.getAttribute('data-id'),
-                    modelo: this.getAttribute('data-modelo')
-                };
-
-                document.getElementById('modeloEliminar').textContent = modeloAEliminar.modelo;
-                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
-                modal.show();
-            });
-        });
-
-        document.getElementById('btn-confirmar-eliminar').addEventListener('click', function () {
-            if (modeloAEliminar) {
-                fetch(`/EquiposRegistrados/Eliminar/${modeloAEliminar.id}`, {
-                    method: 'POST',
-                    headers: {
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value,
-                        'Content-Type': 'application/json'
-                    }
-                }).then(response => {
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        alert('Error al eliminar el modelo');
-                    }
-                }).catch(error => {
-                    console.error('Error:', error);
-                    alert('Error al eliminar el modelo');
-                });
-            }
-        });
-
-        // Aplicar filtros
+        // Lógica para aplicar los filtros
         document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
             const tipo = document.getElementById('filtro-tipo').value;
             const marca = document.getElementById('filtro-marca').value;
@@ -268,6 +233,27 @@
             if (busqueda) url.searchParams.set('busqueda', busqueda);
 
             window.location.href = url.toString();
+        });
+
+        // Lógica para el botón de Eliminar
+        let idPerfilAEliminar = null;
+        document.querySelectorAll('.btn-eliminar').forEach(btn => {
+            btn.addEventListener('click', function () {
+                idPerfilAEliminar = this.getAttribute('data-id');
+                const nombrePerfil = this.getAttribute('data-perfil');
+                document.getElementById('perfilAEliminar').textContent = nombrePerfil;
+                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+                modal.show();
+            });
+        });
+
+        document.getElementById('formEliminar').addEventListener('submit', function (e) {
+            if (idPerfilAEliminar) {
+                this.querySelector('#idPerfilAEliminar').value = idPerfilAEliminar;
+            } else {
+                e.preventDefault();
+                alert('Error: No se ha seleccionado un perfil para eliminar.');
+            }
         });
     </script>
 }

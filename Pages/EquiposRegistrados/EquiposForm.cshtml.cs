@@ -218,6 +218,37 @@ namespace InventarioComputo.Pages.EquiposRegistrados
             return new JsonResult(modelos);
         }
 
+        public async Task<JsonResult> OnGetCaracteristicasPorTipo(int tipoId)
+        {
+            var caracteristicas = new List<CaracteristicaInfo>();
+            try
+            {
+                using (var connection = await _dbConnection.GetConnectionAsync())
+                {
+                    var query = "SELECT id_caracteristica, Caracteristica FROM Caracteristicas WHERE id_tipoequipo = @TipoId";
+                    var cmd = new SqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@TipoId", tipoId);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            caracteristicas.Add(new CaracteristicaInfo
+                            {
+                                Id = reader.GetInt32(0),
+                                Nombre = reader.GetString(1)
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cargando características: {ex}");
+            }
+            return new JsonResult(caracteristicas);
+        }
+
         public async Task<JsonResult> OnPostAgregarModelo([FromBody] NuevoModeloRequest request)
         {
             try
@@ -282,7 +313,7 @@ namespace InventarioComputo.Pages.EquiposRegistrados
                                 var cmdInsert = new SqlCommand(
                                     "INSERT INTO Perfiles (NombrePerfil, id_modelo) " +
                                     "VALUES (@NombrePerfil, @IdModelo); " +
-                                    "SELECT SCOPE_IDENTITY();",  // Cambio clave aquí
+                                    "SELECT SCOPE_IDENTITY();",
                                     connection, transaction);
 
                                 cmdInsert.Parameters.AddWithValue("@NombrePerfil", NombrePerfil);
@@ -291,7 +322,7 @@ namespace InventarioComputo.Pages.EquiposRegistrados
                                 var result = await cmdInsert.ExecuteScalarAsync();
                                 if (result != null)
                                 {
-                                    Id = Convert.ToInt32(result);  // Convertir a int
+                                    Id = Convert.ToInt32(result);
                                     Console.WriteLine($"Nuevo perfil creado con ID: {Id}");
                                 }
                                 else

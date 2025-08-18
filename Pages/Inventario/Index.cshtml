@@ -240,6 +240,14 @@
                                     <i class="fas fa-tools"></i>
                                 </button>
                             }
+                            @if (Model.RolUsuario == "Administrador")
+                            {
+                                <button class="btn btn-action btn-eliminar"
+                                        data-id="@equipo.id_activofijo"
+                                        title="Eliminar">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            }
                         </td>
                     </tr>
                 }
@@ -261,13 +269,33 @@
                     $"&estado={Model.EstadoFilter}" +
                     $"&empleado={Model.EmpleadoFilter}" +
                     $"&busqueda={Model.BusquedaFilter}";
-
                     <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
                         <a class="page-link" href="@url">@i</a>
                     </li>
                 }
             </ul>
         </nav>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header beige-bg">
+                <h5 class="modal-title beige-text">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                ¿Está seguro que desea eliminar este activo fijo? Esta acción no se puede deshacer.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" asp-page-handler="Delete" id="formEliminar">
+                    <input type="hidden" name="id" id="idActivoFijoAEliminar" />
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -295,13 +323,32 @@
 @section Scripts {
     <script src="~/js/Script_Tablas.js" asp-append-version="true"></script>
     <script>
-        // Mantenimientos
         document.addEventListener('DOMContentLoaded', function () {
+            // Lógica para el botón de Mantenimiento
             document.querySelectorAll('.btn-mantenimiento').forEach(btn => {
                 btn.addEventListener('click', function () {
                     const idEquipo = this.getAttribute('data-id');
-                    window.location.href = `/Mantenimientos/Nuevo?idEquipo=${idEquipo}`;
+                    window.location.href = `/Mantenimientos/PruebaFormulario?idEquipo=${idEquipo}`;
                 });
+            });
+
+            // Lógica para el botón de Eliminar
+            let idActivoFijo = null;
+            document.querySelectorAll('.btn-eliminar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    idActivoFijo = this.getAttribute('data-id');
+                    const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+                    modal.show();
+                });
+            });
+
+            document.getElementById('formEliminar').addEventListener('submit', function (e) {
+                if (idActivoFijo) {
+                    this.querySelector('#idActivoFijoAEliminar').value = idActivoFijo;
+                } else {
+                    e.preventDefault();
+                    alert('Error: No se ha seleccionado un activo fijo para eliminar.');
+                }
             });
         });
     </script>

@@ -2,14 +2,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 public class PrincipalModel : PageModel
 {
     private readonly ConexionBDD _dbConnection;
 
-    public int TotalEquipos { get; set; }
-    public int TotalSucursales { get; set; }
-    public int MantenimientosPendientes { get; set; }
+    public int TotalActivosFijos { get; set; }
+    public int TotalMantenimientos { get; set; }
+    public int TotalEmpleados { get; set; }
+    public int TotalEquiposRegistrados { get; set; }
+    public int TotalDepartamentos { get; set; }
+    public int TotalUsuarios { get; set; }
+
     public string NombreUsuario { get; set; }
     public string RolUsuario { get; set; }
 
@@ -28,23 +33,40 @@ public class PrincipalModel : PageModel
         {
             using (var connection = await _dbConnection.GetConnectionAsync())
             {
-                var cmdEquipos = new SqlCommand("SELECT COUNT(*) FROM ActivosFijos", connection);
-                TotalEquipos = (int)await cmdEquipos.ExecuteScalarAsync();
+                // Consulta para el total de activos fijos
+                var cmdActivos = new SqlCommand("SELECT COUNT(*) FROM ActivosFijos", connection);
+                TotalActivosFijos = (int)await cmdActivos.ExecuteScalarAsync();
 
-                var cmdSucursales = new SqlCommand("SELECT COUNT(*) FROM Sucursales", connection);
-                TotalSucursales = (int)await cmdSucursales.ExecuteScalarAsync();
+                // Consulta para el total de mantenimientos
+                var cmdMantenimientos = new SqlCommand("SELECT COUNT(*) FROM MantenimientosEquipos", connection);
+                TotalMantenimientos = (int)await cmdMantenimientos.ExecuteScalarAsync();
 
-                var cmdMantenimientos = new SqlCommand(
-                    "SELECT COUNT(*) FROM MantenimientosEquipos WHERE Fecha >= DATEADD(day, -30, GETDATE())",
-                    connection);
-                MantenimientosPendientes = (int)await cmdMantenimientos.ExecuteScalarAsync();
+                // Consulta para el total de empleados
+                var cmdEmpleados = new SqlCommand("SELECT COUNT(*) FROM Empleados", connection);
+                TotalEmpleados = (int)await cmdEmpleados.ExecuteScalarAsync();
+
+                // Consulta para el total de equipos registrados (Perfiles)
+                var cmdEquiposRegistrados = new SqlCommand("SELECT COUNT(*) FROM Perfiles", connection);
+                TotalEquiposRegistrados = (int)await cmdEquiposRegistrados.ExecuteScalarAsync();
+
+                // Consulta para el total de departamentos
+                var cmdDepartamentos = new SqlCommand("SELECT COUNT(*) FROM DepartamentosEmpresa", connection);
+                TotalDepartamentos = (int)await cmdDepartamentos.ExecuteScalarAsync();
+
+                // Consulta para el total de usuarios
+                var cmdUsuarios = new SqlCommand("SELECT COUNT(*) FROM Usuarios", connection);
+                TotalUsuarios = (int)await cmdUsuarios.ExecuteScalarAsync();
             }
         }
         catch (Exception ex)
         {
-            TotalEquipos = 0;
-            TotalSucursales = 0;
-            MantenimientosPendientes = 0;
+            // En caso de error, los valores se mantendrán en 0
+            TotalActivosFijos = 0;
+            TotalMantenimientos = 0;
+            TotalEmpleados = 0;
+            TotalEquiposRegistrados = 0;
+            TotalDepartamentos = 0;
+            TotalUsuarios = 0;
         }
     }
 }

@@ -14,12 +14,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Remove="Pages\Departamentos\FormDepa.cshtml" />
+    <Content Remove="Pages\Departamentos\FormularioDepartamentos.cshtml" />
     <Content Remove="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
     <Content Remove="Pages\Sucursales.cshtml" />
     <Content Remove="Pages\Usuarios\PermisosUsuario.cshtml" />
   </ItemGroup>
 
   <ItemGroup>
+    <_ContentIncludedByDefault Remove="Pages\Departamentos\FormDepa.cshtml" />
+    <_ContentIncludedByDefault Remove="Pages\Departamentos\FormularioDepartamentos.cshtml" />
     <_ContentIncludedByDefault Remove="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
     <_ContentIncludedByDefault Remove="Pages\Sucursales.cshtml" />
     <_ContentIncludedByDefault Remove="Pages\Usuarios\PermisosUsuario.cshtml" />
@@ -27,6 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Pages\Departamentos\FormDepa.cshtml" />
+    <None Include="Pages\Departamentos\FormularioDepartamentos.cshtml" />
     <None Include="Pages\Departamentos\Index.cshtml" />
     <None Include="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
     <None Include="Pages\Usuarios\PermisosUsuario.cshtml" />
@@ -55,6 +61,14 @@
 
   <ItemGroup>
     <UpToDateCheckInput Remove="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Pages\Departamentos\FormularioDepartamentos.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Pages\Departamentos\FormDepa.cshtml" />
   </ItemGroup>
 
 </Project>

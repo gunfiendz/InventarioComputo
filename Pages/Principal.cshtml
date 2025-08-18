@@ -6,7 +6,6 @@
 }
 
 <div class="dashboard-container">
-    <!-- Header con bienvenida -->
     <div class="dashboard-bienvenida">
         <h1 class="beige-text">Bienvenido/a, <span id="username-display">@Model.NombreUsuario</span></h1>
         <p class="beige-light">Sistema de Inventario de Computo - La Armería</p>
@@ -77,13 +76,12 @@
         </div>
     </div>
 
-    <!-- Tarjetas de resumen -->
     <h3 class="beige-text">Acciones</h3>
     <div class="summary-cards">
         <div class="card beige-card">
             <div class="card-body">
                 <h5 class="card-title">Activos Fijos</h5>
-                <p class="card-value">1,248</p>
+                <p class="card-value">@Model.TotalActivosFijos</p>
                 <a href="/Inventario" class="btn btn-beige-sm">Gestionar</a>
             </div>
         </div>
@@ -91,7 +89,7 @@
         <div class="card beige-card">
             <div class="card-body">
                 <h5 class="card-title">Mantenimientos</h5>
-                <p class="card-value">24</p>
+                <p class="card-value">@Model.TotalMantenimientos</p>
                 <a href="/Mantenimientos" class="btn btn-beige-sm">Gestionar</a>
             </div>
         </div>
@@ -101,7 +99,7 @@
             <div class="card beige-card">
                 <div class="card-body">
                     <h5 class="card-title">Empleados</h5>
-                    <p class="card-value">3</p>
+                    <p class="card-value">@Model.TotalEmpleados</p>
                     <a href="/Empleados" class="btn btn-beige-sm">Gestionar</a>
                 </div>
             </div>
@@ -112,7 +110,7 @@
         <div class="card beige-card">
             <div class="card-body">
                 <h5 class="card-title">Equipos Registrados</h5>
-                <p class="card-value">7</p>
+                <p class="card-value">@Model.TotalEquiposRegistrados</p>
                 <a href="/EquiposRegistrados" class="btn btn-beige-sm">Gestionar</a>
             </div>
         </div>
@@ -120,7 +118,7 @@
         <div class="card beige-card">
             <div class="card-body">
                 <h5 class="card-title">Departamentos</h5>
-                <p class="card-value">18</p>
+                <p class="card-value">@Model.TotalDepartamentos</p>
                 <a href="/Departamentos" class="btn btn-beige-sm">Gestionar</a>
             </div>
         </div>
@@ -131,15 +129,14 @@
             <div class="card beige-card">
                 <div class="card-body">
                     <h5 class="card-title">Usuarios</h5>
-                    <p class="card-value">4</p>
+                    <p class="card-value">@Model.TotalUsuarios</p>
                     <a href="/Usuarios" class="btn btn-beige-sm">Gestionar</a>
                 </div>
             </div>
         }
 
-        
     </div>
-    
+
 </div>
 
 @section Styles {

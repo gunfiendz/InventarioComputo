@@ -4,6 +4,8 @@ using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
+using System.Linq;
+using System.Data;
 
 namespace InventarioComputo.Pages.EquiposRegistrados
 {
@@ -164,6 +166,53 @@ namespace InventarioComputo.Pages.EquiposRegistrados
                     Modelos.Add(modelo);
                 }
             }
+        }
+
+        public async Task<IActionResult> OnPostDeleteAsync(int id)
+        {
+            try
+            {
+                using (var connection = await _dbConnection.GetConnectionAsync())
+                {
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Primero, eliminar las características asociadas a este perfil
+                            string deleteCaracteristicasQuery = "DELETE FROM CaracteristicasModelos WHERE id_perfil = @Id";
+                            using (var cmd = new SqlCommand(deleteCaracteristicasQuery, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@Id", id);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+
+                            // Luego, eliminar el perfil
+                            string deletePerfilQuery = "DELETE FROM Perfiles WHERE id_perfil = @Id";
+                            using (var cmd = new SqlCommand(deletePerfilQuery, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@Id", id);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+
+                            await transaction.CommitAsync();
+                            TempData["Mensaje"] = "¡El perfil de equipo ha sido eliminado correctamente!";
+                        }
+                        catch (Exception ex)
+                        {
+                            await transaction.RollbackAsync();
+                            TempData["Error"] = $"Error al eliminar el perfil de equipo: {ex.Message}";
+                            Console.WriteLine($"Error en transacción al eliminar el perfil: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al eliminar el perfil de equipo: {ex.Message}";
+                Console.WriteLine($"Error general al eliminar el perfil: {ex.Message}");
+            }
+
+            return RedirectToPage();
         }
 
         public class ModeloViewModel

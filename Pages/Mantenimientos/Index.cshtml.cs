@@ -200,6 +200,29 @@ namespace InventarioComputo.Pages.Mantenimientos
             }
         }
 
+        public async Task<IActionResult> OnPostDeleteAsync(int id)
+        {
+            try
+            {
+                using (var connection = await _dbConnection.GetConnectionAsync())
+                {
+                    string deleteQuery = "DELETE FROM MantenimientosEquipos WHERE id_mantenimientoequipo = @Id";
+                    using (var cmd = new SqlCommand(deleteQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", id);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                TempData["Mensaje"] = "¡El mantenimiento ha sido eliminado correctamente!";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al eliminar el mantenimiento: {ex.Message}";
+                Console.WriteLine($"Error al eliminar el mantenimiento: {ex.Message}");
+            }
+            return RedirectToPage();
+        }
+
         public class MantenimientoViewModel
         {
             public int Id { get; set; }

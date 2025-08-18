@@ -1,0 +1,78 @@
+﻿@page "{handler?}/{id:int?}"
+@model InventarioComputo.Pages.Departamentos.DepaFormModel
+@{
+    ViewData["Title"] = Model.Modo == "Crear" ?
+        "Nuevo Departamento" :
+                        Model.Modo == "Editar" ?
+        "Editar Departamento" : "Ver Departamento";
+    Layout = "_LayoutGeneral";
+    bool esModoLectura = Model.Modo == "Ver";
+}
+
+<div class="container-form">
+    <h1 class="beige-text"><i class="fas fa-sitemap"></i> @ViewData["Title"]</h1>
+
+    <form method="post" class="form-beige">
+        <input type="hidden" asp-for="Departamento.Id" />
+        <input type="hidden" asp-for="Modo" />
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label asp-for="Departamento.Nombre" class="form-label">Nombre del Departamento</label>
+                    <input asp-for="Departamento.Nombre" class="form-control" readonly="@esModoLectura" />
+                    <span asp-validation-for="Departamento.Nombre" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Departamento.Descripcion" class="form-label">Descripción (opcional)</label>
+                    <textarea asp-for="Departamento.Descripcion" class="form-control" rows="3" readonly="@esModoLectura"></textarea>
+                    <span asp-validation-for="Departamento.Descripcion" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">Áreas asociadas</label>
+                    @if (Model.Areas.Any())
+                    {
+                        @for (int i = 0; i < Model.Areas.Count; i++)
+                        {
+                            <div class="form-check">
+                                <input type="hidden" asp-for="Areas[i].Id" />
+                                <input type="hidden" asp-for="Areas[i].Nombre" />
+                                <input class="form-check-input" type="checkbox" asp-for="Areas[i].Seleccionada" disabled="@esModoLectura" />
+                                <label class="form-check-label" asp-for="Areas[i].Seleccionada">@Model.Areas[i].Nombre</label>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">No se encontraron áreas disponibles.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            @if (Model.Modo == "Crear")
+            {
+                <button type="submit" class="btn btn-beige">Guardar</button>
+                <a asp-page="Index" class="btn btn-cancelar">Cancelar</a>
+            }
+            else if (Model.Modo == "Editar")
+            {
+                <button type="submit" class="btn btn-beige">Actualizar</button>
+                <a asp-page="Index" class="btn btn-cancelar">Cancelar</a>
+            }
+            else // Modo "Ver"
+            {
+                <a asp-page="DepaForm" asp-route-handler="Editar" asp-route-id="@Model.Departamento.Id" class="btn btn-beige">Editar</a>
+                <a asp-page="Index" class="btn btn-cancelar">Volver</a>
+            }
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 using System;
 using System.Linq;
 using System.Security.Claims;
+using System.Data;
 
-namespace InventarioComputo.Pages.Sucursales
+namespace InventarioComputo.Pages.Departamentos
 {
     public class DepartamentosModel : PageModel
     {
@@ -20,12 +21,8 @@ namespace InventarioComputo.Pages.Sucursales
         public int RegistrosPorPagina { get; set; } = 15;
         public string NombreUsuario { get; set; }
         public string RolUsuario { get; set; }
-
-        // Propiedades para ordenamiento
         public string SortColumn { get; set; } = "NombreDepartamento";
         public string SortDirection { get; set; } = "ASC";
-
-        // Propiedades para filtros
         public string BusquedaFilter { get; set; }
 
         public DepartamentosModel(ConexionBDD dbConnection)
@@ -44,7 +41,6 @@ namespace InventarioComputo.Pages.Sucursales
             SortDirection = sortDirection;
             BusquedaFilter = busqueda;
 
-            // Validar columnas para evitar SQL injection
             var columnasValidas = new Dictionary<string, string>
             {
                 {"NombreDepartamento", "de.NombreDepartamento"},
@@ -58,7 +54,6 @@ namespace InventarioComputo.Pages.Sucursales
 
             SortDirection = SortDirection.ToUpper() == "DESC" ? "DESC" : "ASC";
 
-            // Obtener usuario
             NombreUsuario = User.Identity.Name;
             RolUsuario = User.FindFirst(ClaimTypes.Role)?.Value;
 
@@ -94,7 +89,6 @@ namespace InventarioComputo.Pages.Sucursales
 
         private async Task CargarDepartamentos(SqlConnection connection, string sortColumn)
         {
-            // Consulta para contar el total de registros
             var countQuery = @"
                 SELECT COUNT(DISTINCT de.id_DE) 
                 FROM DepartamentosEmpresa de
@@ -107,7 +101,6 @@ namespace InventarioComputo.Pages.Sucursales
             var totalRegistros = (int)await countCommand.ExecuteScalarAsync();
             TotalPaginas = (int)Math.Ceiling((double)totalRegistros / RegistrosPorPagina);
 
-            // Consulta principal con áreas asociadas
             var query = $@"
                 SELECT 
                     de.id_DE,
@@ -153,6 +146,68 @@ namespace InventarioComputo.Pages.Sucursales
                     }
                 }
             }
+        }
+
+        public async Task<IActionResult> OnPostDeleteAsync(int id)
+        {
+            try
+            {
+                using (var connection = await _dbConnection.GetConnectionAsync())
+                {
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Verificar si hay empleados asignados a este departamento
+                            string checkEmpleadosQuery = "SELECT COUNT(*) FROM Empleados WHERE id_DE = @Id";
+                            using (var cmd = new SqlCommand(checkEmpleadosQuery, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@Id", id);
+                                int empleadosCount = (int)await cmd.ExecuteScalarAsync();
+                                if (empleadosCount > 0)
+                                {
+                                    throw new InvalidOperationException($"No se puede eliminar el departamento porque tiene {empleadosCount} empleado(s) asociado(s).");
+                                }
+                            }
+
+                            // 1. Eliminar las áreas asociadas en DepartamentosAreas
+                            string deleteAreasQuery = "DELETE FROM DepartamentosAreas WHERE id_DE = @Id";
+                            using (var cmd = new SqlCommand(deleteAreasQuery, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@Id", id);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+
+                            // 2. Eliminar el registro del departamento en DepartamentosEmpresa
+                            string deleteDepartamentoQuery = "DELETE FROM DepartamentosEmpresa WHERE id_DE = @Id";
+                            using (var cmd = new SqlCommand(deleteDepartamentoQuery, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@Id", id);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+
+                            await transaction.CommitAsync();
+                            TempData["Mensaje"] = "¡El departamento ha sido eliminado correctamente!";
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            await transaction.RollbackAsync();
+                            TempData["Error"] = ex.Message;
+                        }
+                        catch (Exception ex)
+                        {
+                            await transaction.RollbackAsync();
+                            TempData["Error"] = $"Error en la transacción al eliminar: {ex.Message}";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error general al eliminar el departamento: {ex.Message}";
+            }
+
+            return RedirectToPage();
         }
 
         public class DepartamentoViewModel

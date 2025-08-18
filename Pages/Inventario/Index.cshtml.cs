@@ -62,16 +62,16 @@ namespace InventarioComputo.Pages.Inventario
 
             // Validar y mapear columnas para evitar SQL injection
             var columnasValidas = new Dictionary<string, string>
-    {
-        {"EtiquetaInv", "af.EtiquetaInv"},
-        {"NumeroSerie", "af.NumeroSerie"},
-        {"TipoEquipo", "te.TipoEquipo"},
-        {"NombrePerfil", "p.NombrePerfil"},
-        {"Marca", "m.Marca"},
-        {"DepartamentoEmpresa", "ISNULL(de.NombreDepartamento, 'No asignado')"},
-        {"Estado", "e.Estado"},
-        {"AsignadoA", "ISNULL(emp.Nombre, 'No asignado')"}
-    };
+            {
+                {"EtiquetaInv", "af.EtiquetaInv"},
+                {"NumeroSerie", "af.NumeroSerie"},
+                {"TipoEquipo", "te.TipoEquipo"},
+                {"NombrePerfil", "p.NombrePerfil"},
+                {"Marca", "m.Marca"},
+                {"DepartamentoEmpresa", "ISNULL(de.NombreDepartamento, 'No asignado')"},
+                {"Estado", "e.Estado"},
+                {"AsignadoA", "ISNULL(emp.Nombre, 'No asignado')"}
+            };
 
             if (!columnasValidas.ContainsKey(SortColumn))
             {
@@ -250,13 +250,57 @@ namespace InventarioComputo.Pages.Inventario
             }
         }
 
+        public async Task<IActionResult> OnPostDeleteAsync(int id)
+        {
+            try
+            {
+                using (var connection = await _dbConnection.GetConnectionAsync())
+                {
+                    // La lógica de eliminación debe considerar las dependencias. 
+                    // Se asume que no hay asignaciones ni mantenimientos activos para este equipo.
+                    // Si existen, se debe manejar la eliminación en cascada o la validación.
+
+                    // Primero, eliminar registros en tablas relacionadas (si existen)
+                    string deleteAsignacionesQuery = "DELETE FROM EmpleadosEquipos WHERE id_activofijo = @Id";
+                    using (var cmd = new SqlCommand(deleteAsignacionesQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", id);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+
+                    string deleteMantenimientosQuery = "DELETE FROM MantenimientosEquipos WHERE id_activofijo = @Id";
+                    using (var cmd = new SqlCommand(deleteMantenimientosQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", id);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+
+                    // Después, eliminar el activo fijo
+                    string deleteQuery = "DELETE FROM ActivosFijos WHERE id_activofijo = @Id";
+                    using (var cmd = new SqlCommand(deleteQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", id);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                TempData["Mensaje"] = "¡El activo fijo ha sido eliminado correctamente!";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al eliminar el activo fijo: {ex.Message}";
+                Console.WriteLine($"Error al eliminar el activo fijo: {ex.Message}");
+            }
+
+            return RedirectToPage();
+        }
+
         public class Equipo
         {
             public int id_activofijo { get; set; }
             public string EtiquetaInv { get; set; }
             public string NumeroSerie { get; set; }
             public string TipoEquipo { get; set; }
-            public string NombrePerfil {  get; set; }
+            public string NombrePerfil { get; set; }
             public string Marca { get; set; }
             public string Modelo { get; set; }
             public string DepartamentoEmpresa { get; set; }

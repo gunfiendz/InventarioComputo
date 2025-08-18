@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
+using System.Linq;
 
 namespace InventarioComputo.Pages.Empleados
 {
@@ -154,6 +155,34 @@ namespace InventarioComputo.Pages.Empleados
                     Empleados.Add(empleado);
                 }
             }
+        }
+
+        public async Task<IActionResult> OnPostDeleteAsync(int id)
+        {
+            try
+            {
+                using (var connection = await _dbConnection.GetConnectionAsync())
+                {
+                    // La lógica de eliminación debe considerar las dependencias.
+                    // Si el empleado tiene un usuario asociado, se debe manejar eso primero.
+                    // Aquí se asume que no hay dependencias de usuario o que la base de datos las maneja en cascada.
+
+                    string deleteQuery = "DELETE FROM Empleados WHERE id_empleado = @Id";
+                    using (var cmd = new SqlCommand(deleteQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", id);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                TempData["Mensaje"] = "¡El empleado ha sido eliminado correctamente!";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al eliminar el empleado: {ex.Message}";
+                Console.WriteLine($"Error al eliminar el empleado: {ex.Message}");
+            }
+
+            return RedirectToPage();
         }
 
         public class EmpleadoViewModel

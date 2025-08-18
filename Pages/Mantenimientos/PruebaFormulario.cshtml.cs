@@ -112,11 +112,12 @@ namespace InventarioComputo.Pages.Mantenimientos
                         p.NombrePerfil,
                         mo.Modelo,
                         m.Marca
+
+
                     FROM ActivosFijos af
                     JOIN Perfiles p ON af.id_perfil = p.id_perfil
                     JOIN Modelos mo ON p.id_modelo = mo.id_modelo
                     JOIN Marcas m ON mo.id_marca = m.id_marca
-                    WHERE af.id_estado = (SELECT id_estado FROM Estados WHERE Estado = 'Activo')
                     ORDER BY af.EtiquetaInv";
 
                 var command = new SqlCommand(query, connection);
@@ -251,7 +252,7 @@ namespace InventarioComputo.Pages.Mantenimientos
                     }
 
                     await command.ExecuteNonQueryAsync();
-                    return RedirectToPage("./ListaMantenimientos");
+                    return RedirectToPage("Index");
                 }
             }
             catch (Exception ex)

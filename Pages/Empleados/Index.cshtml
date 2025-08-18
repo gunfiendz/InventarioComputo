@@ -1,5 +1,5 @@
 ﻿@page
-@model EmpleadosModel
+@model InventarioComputo.Pages.Empleados.EmpleadosModel
 @{
     ViewData["Title"] = "Gestión de Empleados";
     Layout = "_LayoutGeneral";
@@ -39,7 +39,7 @@
 
             <div class="filtro-item">
                 <label class="form-label beige-text">Buscar:</label>
-                <input type="text" id="filtro-busqueda" class="form-control input-beige" 
+                <input type="text" id="filtro-busqueda" class="form-control input-beige"
                        placeholder="Nombre, email..." value="@Model.BusquedaFilter">
             </div>
         </div>
@@ -106,7 +106,7 @@
                         <td>@empleado.Email</td>
                         <td>@empleado.Telefono</td>
                         <td class="acciones">
-                            <a asp-page="EditarEmpleado" asp-route-id="@empleado.Id" class="btn btn-action" title="Editar">
+                            <a asp-page="FormularioEmpleado" asp-route-handler="Editar" asp-route-id="@empleado.Id" class="btn btn-action" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <button class="btn btn-action btn-eliminar"
@@ -133,7 +133,6 @@
                     $"&departamento={Model.DepartamentoFilter}" +
                     $"&puesto={Model.PuestoFilter}" +
                     $"&busqueda={Model.BusquedaFilter}";
-
                     <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
                         <a class="page-link" href="@url">@i</a>
                     </li>
@@ -143,7 +142,6 @@
     </div>
 </div>
 
-<!-- Modal de confirmación -->
 <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -156,7 +154,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" id="btn-confirmar-eliminar">Eliminar</button>
+                <form method="post" asp-page-handler="Delete" id="formEliminar">
+                    <input type="hidden" name="id" id="idEmpleadoAEliminar" />
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
             </div>
         </div>
     </div>
@@ -170,55 +171,19 @@
     <script>
         // Ordenamiento
         document.querySelectorAll('.sort-link').forEach(link => {
-            link.addEventListener('click', function(e) {
+            link.addEventListener('click', function (e) {
                 e.preventDefault();
                 const column = this.closest('th').dataset.sortColumn;
                 const currentOrder = '@Model.SortDirection';
                 const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
-                
+
                 const url = new URL(window.location.href);
                 url.searchParams.set('sortColumn', column);
                 url.searchParams.set('sortDirection', newOrder);
                 url.searchParams.set('pagina', '1');
-                
+
                 window.location.href = url.toString();
             });
-        });
-
-        // Eliminación
-        let empleadoAEliminar = null;
-        document.querySelectorAll('.btn-eliminar').forEach(btn => {
-            btn.addEventListener('click', function () {
-                empleadoAEliminar = {
-                    id: this.getAttribute('data-id'),
-                    nombre: this.getAttribute('data-nombre')
-                };
-
-                document.getElementById('nombreEmpleadoEliminar').textContent = empleadoAEliminar.nombre;
-                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
-                modal.show();
-            });
-        });
-
-        document.getElementById('btn-confirmar-eliminar').addEventListener('click', function () {
-            if (empleadoAEliminar) {
-                fetch(`/Empleados/Eliminar/${empleadoAEliminar.id}`, {
-                    method: 'POST',
-                    headers: {
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value,
-                        'Content-Type': 'application/json'
-                    }
-                }).then(response => {
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        alert('Error al eliminar el empleado');
-                    }
-                }).catch(error => {
-                    console.error('Error:', error);
-                    alert('Error al eliminar el empleado');
-                });
-            }
         });
 
         // Aplicar filtros
@@ -226,16 +191,38 @@
             const departamento = document.getElementById('filtro-departamento').value;
             const puesto = document.getElementById('filtro-puesto').value;
             const busqueda = document.getElementById('filtro-busqueda').value;
-            
+
             const url = new URL(window.location.href);
             url.searchParams.set('pagina', '1');
+
             url.searchParams.set('sortColumn', '@Model.SortColumn');
             url.searchParams.set('sortDirection', '@Model.SortDirection');
             if (departamento) url.searchParams.set('departamento', departamento);
             if (puesto) url.searchParams.set('puesto', puesto);
             if (busqueda) url.searchParams.set('busqueda', busqueda);
-            
+
             window.location.href = url.toString();
+        });
+
+        // Lógica para el botón de Eliminar
+        let idEmpleadoAEliminar = null;
+        document.querySelectorAll('.btn-eliminar').forEach(btn => {
+            btn.addEventListener('click', function () {
+                idEmpleadoAEliminar = this.getAttribute('data-id');
+                const nombre = this.getAttribute('data-nombre');
+                document.getElementById('nombreEmpleadoEliminar').textContent = nombre;
+                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+                modal.show();
+            });
+        });
+
+        document.getElementById('formEliminar').addEventListener('submit', function (e) {
+            if (idEmpleadoAEliminar) {
+                this.querySelector('#idEmpleadoAEliminar').value = idEmpleadoAEliminar;
+            } else {
+                e.preventDefault();
+                alert('Error: No se ha seleccionado un empleado para eliminar.');
+            }
         });
     </script>
 }
