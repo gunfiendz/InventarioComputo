@@ -21,10 +21,6 @@
       "PackagePath": "staticwebassets\\Styles\\Style_Inventario.css"
     },
     {
-      "Id": "C:\\Users\\Ramon Zavala\\source\\repos\\InventarioComputo\\InventarioComputo\\wwwroot\\Styles\\Style_LayoutDashboard.css",
-      "PackagePath": "staticwebassets\\Styles\\Style_LayoutDashboard.css"
-    },
-    {
       "Id": "C:\\Users\\Ramon Zavala\\source\\repos\\InventarioComputo\\InventarioComputo\\wwwroot\\Styles\\Style_Principal.css",
       "PackagePath": "staticwebassets\\Styles\\Style_Principal.css"
     },

@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "adzvW7NknL1hh5b4xJokdKkWfA0OF5TOK7AISB2mbtg=",
+  "Hash": "t8Cr5tRH40Veaigc0g31FcM3wT86yO6n+V5E63vBjgw=",
   "Source": "InventarioComputo",
   "BasePath": "_content/InventarioComputo",
   "Mode": "Default",
@@ -2143,25 +2143,6 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\Styles\\Style_Inventario.css"
-    },
-    {
-      "Identity": "C:\\Users\\Ramon Zavala\\source\\repos\\InventarioComputo\\InventarioComputo\\wwwroot\\Styles\\Style_LayoutDashboard.css",
-      "SourceId": "InventarioComputo",
-      "SourceType": "Discovered",
-      "ContentRoot": "C:\\Users\\Ramon Zavala\\source\\repos\\InventarioComputo\\InventarioComputo\\wwwroot\\",
-      "BasePath": "_content/InventarioComputo",
-      "RelativePath": "Styles/Style_LayoutDashboard.css",
-      "AssetKind": "All",
-      "AssetMode": "All",
-      "AssetRole": "Primary",
-      "AssetMergeBehavior": "PreferTarget",
-      "AssetMergeSource": "",
-      "RelatedAsset": "",
-      "AssetTraitName": "",
-      "AssetTraitValue": "",
-      "CopyToOutputDirectory": "Never",
-      "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "wwwroot\\Styles\\Style_LayoutDashboard.css"
     },
     {
       "Identity": "C:\\Users\\Ramon Zavala\\source\\repos\\InventarioComputo\\InventarioComputo\\wwwroot\\Styles\\Style_Principal.css",

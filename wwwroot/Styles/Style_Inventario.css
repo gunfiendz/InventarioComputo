@@ -111,6 +111,16 @@
     color: #664d03;
 }
 
+.estado-activa {
+    background-color: #d1e7dd; 
+    color: #0f5132;
+}
+
+.estado-historica {
+    background-color: #e2e3e5;
+    color: #41464b;
+}
+
 .acciones {
     display: flex;
     gap: 0.5rem;
@@ -182,3 +192,23 @@
         font-size: 0.8rem;
     }
 }
+
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-beige-secondary {
+    background-color: #f5f5dc; /* beige-light */
+    color: #5a4a3a; /* beige-text */
+    border: 1px solid #d2b48c; /* beige-medium */
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+    .btn-beige-secondary:hover {
+        background-color: #e9e2c4;
+        border-color: #b89a72;
+    }

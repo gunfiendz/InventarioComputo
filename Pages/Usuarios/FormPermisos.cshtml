@@ -1,0 +1,89 @@
+﻿@page
+@model InventarioComputo.Pages.FormPermisosModel
+@{
+    ViewData["Title"] = "Gestión de Permisos de Usuario";
+    Layout = "_LayoutGeneral";
+}
+
+<div class="inventario-container">
+    <div class="inventario-header">
+        <h1 class="beige-text"><i class="fas fa-user-lock"></i> @ViewData["Title"]</h1>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="post">
+        <div class="table-responsive">
+            <table class="table table-hover table-beige">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th class="text-center">Ver Informes</th>
+                        <th class="text-center">Modificar Activos</th>
+                        <th class="text-center">Modificar Usuarios</th>
+                        <th class="text-center">Realizar Mantenimientos</th>
+                        <th class="text-center bg-dark text-white">Acceso Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.ListaPermisos.Count; i++)
+                    {
+                        <tr class="permisos-row">
+                            <input type="hidden" asp-for="ListaPermisos[i].IdUsuario" />
+                            <input type="hidden" asp-for="ListaPermisos[i].Username" />
+
+                            <td><strong>@Model.ListaPermisos[i].Username</strong></td>
+
+                            <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].VerInformes" /></td>
+                            <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarActivos" /></td>
+                            <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarUsuarios" /></td>
+                            <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].RealizarMantenimientos" /></td>
+                            <td class="text-center"><input type="checkbox" class="form-check-input acceso-total-check" asp-for="ListaPermisos[i].AccesoTotal" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="form-actions mt-4">
+            <button type="submit" class="btn btn-beige"><i class="fas fa-save"></i> Guardar Todos los Cambios</button>
+            <a href="/Usuarios" class="btn btn-cancelar">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Función para actualizar los checkboxes de una fila
+            function actualizarFila(row, estaMarcado) {
+                const permisos = row.querySelectorAll('.permiso-check');
+                permisos.forEach(permiso => {
+                    if (estaMarcado) {
+                        permiso.checked = true;
+                        permiso.disabled = true;
+                    } else {
+                        permiso.disabled = false;
+                    }
+                });
+            }
+
+            // Aplicar la lógica a cada checkbox de "Acceso Total"
+            const checkboxesAccesoTotal = document.querySelectorAll('.acceso-total-check');
+            checkboxesAccesoTotal.forEach(checkbox => {
+                // Ejecutar al cargar la página para el estado inicial
+                const filaInicial = checkbox.closest('.permisos-row');
+                actualizarFila(filaInicial, checkbox.checked);
+
+                // Ejecutar cada vez que se haga clic
+                checkbox.addEventListener('change', function () {
+                    const fila = this.closest('.permisos-row');
+                    actualizarFila(fila, this.checked);
+                });
+            });
+        });
+    </script>
+}

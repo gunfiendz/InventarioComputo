@@ -1,0 +1,248 @@
+﻿@page
+@model InventarioComputo.Pages.Inventario.FormMasivoModel
+@{
+    ViewData["Title"] = "Creación Masiva de Equipos";
+    Layout = "_LayoutGeneral";
+}
+
+<div class="container-form">
+    <h1 class="beige-text"><i class="fas fa-layer-group"></i> @ViewData["Title"]</h1>
+    <p class="text-muted">Use este formulario para registrar múltiples activos del mismo perfil de una sola vez. Los números de serie y etiquetas se registrarán como 'PENDIENTE' para ser editados posteriormente desde el listado de inventario.</p>
+
+    <form method="post" class="form-beige">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <h5>1. Seleccione el Perfil del Equipo</h5>
+                <hr />
+                <div class="form-group">
+                    <label class="form-label">Tipo de Equipo</label>
+                    <select asp-for="EquipoMasivo.IdTipoEquipo" class="form-control input-beige" id="tipoEquipo">
+                        <option value="">-- Seleccione un tipo --</option>
+                        @foreach (var tipo in Model.TiposEquipos)
+                        {
+                            <option value="@tipo.Id">@tipo.Nombre</option>
+                        }
+                    </select>
+                    <span asp-validation-for="EquipoMasivo.IdTipoEquipo" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Marca</label>
+                    <select asp-for="EquipoMasivo.IdMarca" class="form-control input-beige" id="marca" disabled>
+                        <option value="">-- Seleccione un tipo primero --</option>
+                    </select>
+                    <span asp-validation-for="EquipoMasivo.IdMarca" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Modelo</label>
+                    <select asp-for="EquipoMasivo.IdModelo" class="form-control input-beige" id="modelo" disabled>
+                        <option value="">-- Seleccione una marca primero --</option>
+                    </select>
+                    <span asp-validation-for="EquipoMasivo.IdModelo" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Perfil del Modelo</label>
+                    <select asp-for="EquipoMasivo.IdPerfil" class="form-control input-beige" id="perfil" disabled>
+                        <option value="">-- Seleccione un modelo primero --</option>
+                    </select>
+                    <span asp-validation-for="EquipoMasivo.IdPerfil" class="text-danger"></span>
+                </div>
+
+                <h5 class="mt-4">2. Ingrese los Datos Comunes</h5>
+                <hr />
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="EquipoMasivo.Cantidad" class="form-label"></label>
+                            <input asp-for="EquipoMasivo.Cantidad" type="number" class="form-control" min="1" max="100" />
+                            <span asp-validation-for="EquipoMasivo.Cantidad" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="EquipoMasivo.FechaCompra" class="form-label"></label>
+                            <input asp-for="EquipoMasivo.FechaCompra" type="date" class="form-control">
+                            <span asp-validation-for="EquipoMasivo.FechaCompra" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label asp-for="EquipoMasivo.Garantia" class="form-label"></label>
+                    <input asp-for="EquipoMasivo.Garantia" class="form-control" />
+                </div>
+            </div>
+
+            <div class="col-md-6">
+
+                <div class="card caracteristicas-card mb-3">
+                    <div class="card-header">
+                        <h6><i class="fas fa-cogs"></i> Características del Perfil</h6>
+                    </div>
+                    <div class="card-body" id="caracteristicas-container">
+                        <p class="text-muted">Seleccione un perfil para ver sus características.</p>
+                    </div>
+                </div>
+
+                <h5>3. Seleccione Software (Opcional)</h5>
+                <hr />
+                <div class="card caracteristicas-card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-compact-disc"></i> Software Preinstalado</h6>
+                    </div>
+                    <div class="card-body software-list">
+                        @if (Model.SoftwareDisponible.Any())
+                        {
+                            @for (int i = 0; i < Model.SoftwareDisponible.Count; i++)
+                            {
+                                <div class="form-check software-item">
+                                    <input type="hidden" asp-for="SoftwareDisponible[i].Id" />
+                                    <input type="hidden" asp-for="SoftwareDisponible[i].Nombre" />
+                                    <input class="form-check-input software-checkbox" type="checkbox" asp-for="SoftwareDisponible[i].IsSelected" />
+                                    <label class="form-check-label" asp-for="SoftwareDisponible[i].IsSelected">
+                                        @Model.SoftwareDisponible[i].Nombre
+                                    </label>
+                                    <input type="text" asp-for="SoftwareDisponible[i].ClaveLicencia"
+                                           class="form-control form-control-sm licencia-input"
+                                           placeholder="Clave de Licencia (opcional)"
+                                           style="display: none;" />
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted">No hay software disponible para agregar.</p>
+                        }
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="form-actions mt-4">
+            <button type="submit" class="btn btn-beige">Crear Equipos</button>
+            <a href="/Inventario" class="btn btn-cancelar">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Styles {
+    <style>
+        .caracteristicas-card .card-body {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .software-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .licencia-input {
+            margin-top: 0.25rem;
+        }
+    </style>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // El script para los dropdowns en cascada y para mostrar/ocultar las licencias es idéntico al de la respuesta anterior
+        document.addEventListener('DOMContentLoaded', function () {
+            const tipoSelect = document.getElementById('tipoEquipo');
+            const marcaSelect = document.getElementById('marca');
+            const modeloSelect = document.getElementById('modelo');
+            const perfilSelect = document.getElementById('perfil');
+
+            function setupEventListeners() {
+                tipoSelect.addEventListener('change', cargarMarcas);
+                marcaSelect.addEventListener('change', cargarModelos);
+                modeloSelect.addEventListener('change', cargarPerfiles);
+                perfilSelect.addEventListener('change', () => cargarCaracteristicas(perfilSelect.value));
+            }
+
+            async function fetchJson(url) {
+                const response = await fetch(url);
+                if (!response.ok) { throw new Error(`Error HTTP ${response.status}`); }
+                return response.json();
+            }
+
+            function populateDropdown(select, items, defaultOption) {
+                select.innerHTML = `<option value="">${defaultOption}</option>`;
+                items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.nombre;
+                    select.appendChild(option);
+                });
+                select.disabled = false;
+            }
+
+            function resetDropdown(select, message) {
+                select.innerHTML = `<option value="">${message}</option>`;
+                select.disabled = true;
+            }
+
+            async function cargarMarcas() {
+                if (!tipoSelect.value) {
+                    resetDropdown(marcaSelect, '-- Seleccione tipo --'); resetDropdown(modeloSelect, '-- Seleccione marca --'); resetDropdown(perfilSelect, '-- Seleccione modelo --'); return;
+                }
+                resetDropdown(marcaSelect, 'Cargando...');
+                try {
+                    const marcas = await fetchJson(`/Inventario/FormMasivo?handler=MarcasPorTipo&tipoId=${tipoSelect.value}`);
+                    populateDropdown(marcaSelect, marcas, '-- Seleccione marca --');
+                } catch (e) { resetDropdown(marcaSelect, '-- Error --'); }
+            }
+
+            async function cargarModelos() {
+                if (!marcaSelect.value) {
+                    resetDropdown(modeloSelect, '-- Seleccione marca --'); resetDropdown(perfilSelect, '-- Seleccione modelo --'); return;
+                }
+                resetDropdown(modeloSelect, 'Cargando...');
+                try {
+                    const modelos = await fetchJson(`/Inventario/FormMasivo?handler=ModelosPorMarcaYTipo&marcaId=${marcaSelect.value}&tipoId=${tipoSelect.value}`);
+                    populateDropdown(modeloSelect, modelos, '-- Seleccione modelo --');
+                } catch (e) { resetDropdown(modeloSelect, '-- Error --'); }
+            }
+
+            async function cargarPerfiles() {
+                if (!modeloSelect.value) {
+                    resetDropdown(perfilSelect, '-- Seleccione modelo --'); return;
+                }
+                resetDropdown(perfilSelect, 'Cargando...');
+                try {
+                    const perfiles = await fetchJson(`/Inventario/FormMasivo?handler=PerfilesPorModelo&modeloId=${modeloSelect.value}`);
+                    populateDropdown(perfilSelect, perfiles, '-- Seleccione perfil --');
+                } catch (e) { resetDropdown(perfilSelect, '-- Error --'); }
+            }
+
+            async function cargarCaracteristicas(perfilId) {
+                const container = document.getElementById('caracteristicas-container');
+                if (!perfilId) { container.innerHTML = '<p class="text-muted">Seleccione un perfil para ver sus características.</p>'; return; }
+                container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+                try {
+                    const caracteristicas = await fetchJson(`/Inventario/FormMasivo?handler=CaracteristicasPorPerfil&perfilId=${perfilId}`);
+                    if (caracteristicas.length > 0) {
+                        let html = '<ul class="list-group list-group-flush">';
+                        caracteristicas.forEach(car => { html += `<li class="list-group-item"><strong>${car.nombre}:</strong> ${car.valor}</li>`; });
+                        html += '</ul>';
+                        container.innerHTML = html;
+                    } else { container.innerHTML = '<p class="text-muted">No hay características para este perfil.</p>'; }
+                } catch (e) { container.innerHTML = '<p class="text-danger">Error al cargar características.</p>'; }
+            }
+
+            setupEventListeners();
+
+            document.querySelectorAll('.software-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function () {
+                    const licenseInput = this.closest('.software-item').querySelector('.licencia-input');
+                    if (this.checked) {
+                        licenseInput.style.display = 'block';
+                    } else {
+                        licenseInput.style.display = 'none';
+                        licenseInput.value = '';
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -10,7 +10,7 @@
         <h1 class="beige-text"><i class="fas fa-laptop"></i> Inventario de Equipos</h1>
         @if (Model.RolUsuario != "Usuario")
         {
-            <a href="/Inventario/Formulario" class="btn btn-beige">
+            <a href="/Inventario/FormMasivo" class="btn btn-beige">
                 <i class="fas fa-plus"></i> Agregar Varios Equipos
             </a>
 
@@ -166,7 +166,7 @@
                     </th>
                     <th data-sort-column="DepartamentoEmpresa">
                         <a href="#" class="sort-link">
-                            DepartamentoEmpresa
+                            Departamento
                             @if (Model.SortColumn == "DepartamentoEmpresa")
                             {
                                 <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
@@ -231,6 +231,14 @@
                                 <a href="/Inventario/Formulario/Editar/@equipo.id_activofijo" class="btn btn-action">
                                     <i class="fas fa-pen"></i>
                                 </a>
+                            }
+                            @if (Model.RolUsuario != "Auditor")
+                            {
+                                <button class="btn btn-action btn-asignar"
+                                        data-id="@equipo.id_activofijo"
+                                        title="Asignar Activo">
+                                    <i class="fas fa-user-check"></i>
+                                </button>
                             }
                             @if (Model.RolUsuario != "Auditor")
                             {
@@ -329,6 +337,13 @@
                 btn.addEventListener('click', function () {
                     const idEquipo = this.getAttribute('data-id');
                     window.location.href = `/Mantenimientos/PruebaFormulario?idEquipo=${idEquipo}`;
+                });
+            });
+
+            document.querySelectorAll('.btn-asignar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const idEquipo = this.getAttribute('data-id');
+                    window.location.href = `/Asignaciones/Asignar?idEquipo=${idEquipo}`;
                 });
             });
 

@@ -10,87 +10,195 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <header class="general-header">
-        <div class="header-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
             <a href="/Principal" class="logo-link">
                 <img src="~/images/Logo_LaArmeria.png" alt="Logo La Armería" class="header-logo">
             </a>
+        </div>
 
-            <button class="hamburger-btn" id="hamburgerBtn">
-                <i class="fas fa-bars"></i>
-            </button>
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a class="nav-link @IsActive("Principal")" asp-page="/Principal">
+                        <i class="fas fa-home"></i> <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @IsActive("Inventario")" asp-page="/Inventario/Index">
+                        <i class="fas fa-laptop"></i> <span>Inventario</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @IsActive("Asignaciones")" asp-page="/Asignaciones/Index">
+                        <i class="fas fa-user-check"></i> <span>Asignaciones</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @IsActive("Mantenimientos")" asp-page="/Mantenimientos/Index">
+                        <i class="fas fa-tools"></i> <span>Mantenimientos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @IsActive("Reportes")" asp-page="/Reportes">
+                        <i class="fas fa-chart-pie"></i> <span>Reportes</span>
+                    </a>
+                </li>
+                @if (User.IsInRole("Administrador"))
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Usuarios")" asp-page="/Usuarios/Index">
+                            <i class="fas fa-user-shield"></i> <span>Usuarios</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </nav>
 
-            <nav class="main-nav" id="mainNav">
-                <ul class="nav-list">
-                    <li class="nav-item">
-                        <a class="nav-link @IsActive("Inventario")" asp-page="~/Inventario">
-                            <i class="fas fa-laptop"></i> <span>Inventario</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @IsActive("Asignaciones")" asp-page="/Asignaciones">
-                            <i class="fas fa-user-check"></i> <span>Asignaciones</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @IsActive("Mantenimientos")" asp-page="/Mantenimientos">
-                            <i class="fas fa-tools"></i> <span>Mantenimientos</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @IsActive("Reportes")" asp-page="/Reportes">
-                            <i class="fas fa-chart-pie"></i> <span>Reportes</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-
-            <div class="user-section">
+        <div class="sidebar-footer dropdown">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
                 <span class="username">@User.Identity?.Name</span>
-                <a href="/Index" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i>
-                </a>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser">
+                <li>
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                        <i class="fas fa-key me-2"></i> Cambiar contraseña
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="/Index">
+                        <i class="fas fa-sign-out-alt me-2"></i> Cerrar sesión
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+
+    <button class="hamburger-btn" id="hamburgerBtn">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="main-content">
+        <main class="general-main">
+            @RenderBody()
+        </main>
+
+        <footer class="general-footer">
+            <div class="container">
+                <p>&copy; @DateTime.Now.Year - Sistema de Inventario La Armería</p>
+                <p class="version">Versión 1.0.1</p>
+            </div>
+        </footer>
+    </div>
+
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePasswordModalLabel"><i class="fas fa-key"></i> Cambiar Contraseña</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changePasswordForm" asp-antiforgery="true">
+                        <div id="passwordChangeAlert" class="alert d-none" role="alert"></div>
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">Contraseña Actual</label>
+                            <input type="password" class="form-control" id="currentPassword" name="currentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Nueva Contraseña</label>
+                            <input type="password" class="form-control" id="newPassword" name="newPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmNewPassword" class="form-label">Confirmar Nueva Contraseña</label>
+                            <input type="password" class="form-control" id="confirmNewPassword" name="confirmNewPassword" required>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </header>
-
-    <main class="general-main">
-        @RenderBody()
-    </main>
-
-    <footer class="general-footer">
-        <div class="container">
-            <p>&copy; @DateTime.Now.Year - Sistema de Inventario La Armería</p>
-            <p class="version">Versión 1.0.0</p>
-        </div>
-    </footer>
+    </div>
 
     @functions {
         string IsActive(string pageName)
         {
-            return ViewContext.RouteData.Values["Page"]?.ToString().Contains(pageName) == true ? "active" : "";
+            var currentPage = ViewContext.RouteData.Values["Page"]?.ToString();
+            if (currentPage == "/Principal" && pageName == "Principal") return "active";
+            return currentPage?.Contains(pageName, StringComparison.OrdinalIgnoreCase) == true && pageName != "Principal" ? "active" : "";
         }
     }
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script>
-        // Menú hamburguesa
+        // Lógica para el menú hamburguesa
         document.getElementById('hamburgerBtn').addEventListener('click', function () {
-            const nav = document.getElementById('mainNav');
-            nav.classList.toggle('show');
-            this.innerHTML = nav.classList.contains('show') ?
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('show');
+            this.innerHTML = sidebar.classList.contains('show') ?
                 '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
         });
 
-        // Cerrar menú al hacer clic en un enlace (para móviles)
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', function () {
-                if (window.innerWidth <= 992) {
-                    document.getElementById('mainNav').classList.remove('show');
-                    document.getElementById('hamburgerBtn').innerHTML = '<i class="fas fa-bars"></i>';
-                }
-            });
+        // ==========================================================
+        // ========= SCRIPT FINAL PARA EL MODAL DE CONTRASEÑA =========
+        // ==========================================================
+        document.getElementById('changePasswordForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const alertBox = document.getElementById('passwordChangeAlert');
+            const formData = new FormData(form);
+            const url = '/FormContra?handler=ChangePassword';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: new URLSearchParams(formData)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status} (${response.statusText})`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    alertBox.textContent = data.message;
+                    alertBox.className = 'alert';
+                    alertBox.classList.remove('d-none');
+
+                    if (data.success) {
+                        alertBox.classList.add('alert-success');
+                        // ESPERA 1.5 SEGUNDOS Y LUEGO REDIRIGE AL LOGIN
+                        setTimeout(() => {
+                            window.location.href = '/Index';
+                        }, 1500);
+                    } else {
+                        alertBox.classList.add('alert-danger');
+                        // LOS CAMPOS SE LIMPIAN AL HABER UN ERROR
+                        form.reset();
+                    }
+                })
+                .catch(error => {
+                    alertBox.textContent = `Error: ${error.message}. Por favor, verifica la URL y el archivo.`;
+                    alertBox.className = 'alert alert-danger';
+                    alertBox.classList.remove('d-none');
+                    // LOS CAMPOS TAMBIÉN SE LIMPIAN AQUÍ
+                    form.reset();
+                });
+        });
+
+        // Limpiar el modal cuando se cierra
+        const passwordModal = document.getElementById('changePasswordModal');
+        passwordModal.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('changePasswordForm').reset();
+            document.getElementById('passwordChangeAlert').classList.add('d-none');
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)

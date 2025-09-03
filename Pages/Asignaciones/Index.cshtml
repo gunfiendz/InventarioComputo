@@ -1,0 +1,128 @@
+﻿@page
+@model InventarioComputo.Pages.Asignaciones.IndexModel
+@{
+    ViewData["Title"] = "Historial de Asignaciones";
+    Layout = "_LayoutGeneral";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/Styles/Style_Inventario.css" asp-append-version="true" />
+}
+
+<div class="inventario-container">
+    <div class="inventario-header">
+        <h1 class="beige-text"><i class="fas fa-history"></i> @ViewData["Title"]</h1>
+        <a href="/Asignaciones/Asignar" class="btn btn-beige">
+            <i class="fas fa-plus"></i> Nueva Asignación
+        </a>
+    </div>
+
+    <form method="get" class="filtros-container beige-bg">
+        <div class="filtros-group">
+            <div class="filtro-item">
+                <label class="form-label">Empleado:</label>
+                <select asp-for="EmpleadoId" class="form-select input-beige" asp-items="Model.Empleados">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="filtro-item">
+                <label class="form-label">Departamento:</label>
+                <select asp-for="DepartamentoId" class="form-select input-beige" asp-items="Model.Departamentos">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="filtro-item">
+                <label class="form-label">Fecha Inicio:</label>
+                <input type="date" asp-for="FechaInicio" class="form-control input-beige">
+            </div>
+            <div class="filtro-item">
+                <label class="form-label">Fecha Fin:</label>
+                <input type="date" asp-for="FechaFin" class="form-control input-beige">
+            </div>
+            <div class="filtro-item">
+                <label class="form-label">Buscar Equipo:</label>
+                <input type="text" asp-for="Busqueda" class="form-control input-beige" placeholder="Etiqueta o No. Serie...">
+            </div>
+        </div>
+        <div class="d-flex justify-content-end mt-2">
+            <a href="/Asignaciones/Index" class="btn btn-cancelar me-2">Limpiar</a>
+            <button type="submit" class="btn btn-beige-sm"><i class="fas fa-filter"></i> Aplicar Filtros</button>
+        </div>
+    </form>
+
+    <div class="table-responsive mt-4">
+        <table class="table table-hover table-beige">
+            <thead>
+                <tr>
+                    <th><a href="#" class="sort-link" data-sort-column="FechaAsignacion">Fecha Asig.</a></th>
+                    <th><a href="#" class="sort-link" data-sort-column="Equipo">Equipo</a></th>
+                    <th>Tipo Asig.</th>
+                    <th><a href="#" class="sort-link" data-sort-column="Empleado">Empleado</a></th>
+                    <th><a href="#" class="sort-link" data-sort-column="Departamento">Departamento</a></th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Historial)
+                {
+                    <tr>
+                        <td>@item.FechaAsignacion.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            @item.Equipo
+                            <small class="d-block text-muted">S/N: @item.NumeroSerie</small>
+                        </td>
+                        <td>@item.TipoAsignacion</td>
+                        <td>@item.Empleado</td>
+                        <td>@item.Departamento</td>
+                        <td>
+                            @if (item.EsActiva)
+                            {
+                                <span class="badge estado-activa">Activa</span>
+                            }
+                            else
+                            {
+                                <span class="badge estado-historica">Histórica</span>
+                                <small class="d-block text-muted">Retiro: @item.FechaRetiro?.ToString("dd/MM/yyyy")</small>
+                            }
+                        </td>
+                        <td class="acciones">
+                            <a href="/Asignaciones/Asignar/Editar/@item.Id" class="btn btn-action">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="paginacion">
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.sort-link').forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+
+                    const column = this.dataset.sortColumn;
+                    const url = new URL(window.location.href);
+                    const currentOrder = url.searchParams.get('sortDirection') || 'DESC';
+
+                    let newOrder = 'ASC';
+                    if (url.searchParams.get('sortColumn') === column && currentOrder === 'ASC') {
+                        newOrder = 'DESC';
+                    }
+
+                    url.searchParams.set('sortColumn', column);
+                    url.searchParams.set('sortDirection', newOrder);
+                    url.searchParams.set('paginaActual', '1');
+                    window.location.href = url.toString();
+                });
+            });
+        });
+    </script>
+}

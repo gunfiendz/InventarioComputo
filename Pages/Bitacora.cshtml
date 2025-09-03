@@ -1,4 +1,208 @@
 ﻿@page
 @model InventarioComputo.Pages.BitacoraModel
 @{
+    ViewData["Title"] = "Bitácora del Sistema";
+    Layout = "_LayoutGeneral";
+}
+
+<div class="inventario-container">
+    <div class="inventario-header">
+        <h1 class="beige-text"><i class="fas fa-book"></i> @ViewData["Title"]</h1>
+    </div>
+
+    <div class="filtros-container beige-bg">
+        <div class="filtros-group">
+            <div class="filtro-item">
+                <label class="form-label beige-text">Módulo:</label>
+                <select id="filtro-modulo" class="form-select input-beige">
+                    <option value="">Todos</option>
+                    @foreach (var modulo in Model.Modulos)
+                    {
+                        <option value="@modulo.Id" selected="@(modulo.Id.ToString() == Model.ModuloFilter)">@modulo.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Acción:</label>
+                <select id="filtro-accion" class="form-select input-beige">
+                    <option value="">Todas</option>
+                    @foreach (var accion in Model.Acciones)
+                    {
+                        <option value="@accion.Id" selected="@(accion.Id.ToString() == Model.AccionFilter)">@accion.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Fecha Inicio:</label>
+                <input type="date" id="filtro-fechainicio" class="form-control input-beige" value="@Model.FechaInicioFilter">
+            </div>
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Fecha Fin:</label>
+                <input type="date" id="filtro-fechafin" class="form-control input-beige" value="@Model.FechaFinFilter">
+            </div>
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Buscar:</label>
+                <input type="text" id="filtro-busqueda" class="form-control input-beige"
+                       placeholder="Usuario, detalles..." value="@Model.BusquedaFilter">
+            </div>
+        </div>
+        <button id="btn-aplicar-filtros" class="btn btn-beige-sm">
+            <i class="fas fa-filter"></i> Aplicar Filtros
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-beige sortable-table">
+            <thead>
+                <tr>
+                    <th data-sort-column="FechaHora">
+                        <a href="#" class="sort-link">
+                            Fecha y Hora
+                            @if (Model.SortColumn == "FechaHora")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Usuario">
+                        <a href="#" class="sort-link">
+                            Usuario
+                            @if (Model.SortColumn == "Usuario")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Modulo">
+                        <a href="#" class="sort-link">
+                            Módulo
+                            @if (Model.SortColumn == "Modulo")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Accion">
+                        <a href="#" class="sort-link">
+                            Acción
+                            @if (Model.SortColumn == "Accion")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                    <th data-sort-column="Detalles">
+                        <a href="#" class="sort-link">
+                            Detalles
+                            @if (Model.SortColumn == "Detalles")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var registro in Model.Registros)
+                {
+                    <tr>
+                        <td>@registro.FechaHora.ToString("g")</td>
+                        <td>@registro.Usuario</td>
+                        <td>@registro.Modulo</td>
+                        <td>@registro.Accion</td>
+                        <td>@registro.Detalles</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="paginacion">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                @for (int i = 1; i <= Model.TotalPaginas; i++)
+                {
+                    var url = $"/Bitacora?pagina={i}" +
+                    $"&sortColumn={Model.SortColumn}" +
+                    $"&sortDirection={Model.SortDirection}" +
+                    $"&busqueda={Model.BusquedaFilter}" +
+                    $"&modulo={Model.ModuloFilter}" +
+                    $"&accion={Model.AccionFilter}" +
+                    $"&fechainicio={Model.FechaInicioFilter}" +
+                    $"&fechafin={Model.FechaFinFilter}";
+                    <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
+                        <a class="page-link" href="@url">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Lógica para el ordenamiento de las tablas
+        document.querySelectorAll('.sort-link').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const column = this.closest('th').dataset.sortColumn;
+                const url = new URL(window.location.href);
+                const currentOrder = url.searchParams.get('sortDirection') || 'DESC';
+                const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+
+                url.searchParams.set('sortColumn', column);
+                url.searchParams.set('sortDirection', newOrder);
+                url.searchParams.set('pagina', '1');
+
+                window.location.href = url.toString();
+            });
+        });
+
+        // Lógica para aplicar los filtros
+        document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
+            const busqueda = document.getElementById('filtro-busqueda').value;
+            const modulo = document.getElementById('filtro-modulo').value;
+            const accion = document.getElementById('filtro-accion').value;
+            const fechaInicio = document.getElementById('filtro-fechainicio').value;
+            const fechaFin = document.getElementById('filtro-fechafin').value;
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('pagina', '1');
+            url.searchParams.set('sortColumn', '@Model.SortColumn');
+            url.searchParams.set('sortDirection', '@Model.SortDirection');
+
+            // Actualizar o eliminar parámetros de filtro según su valor
+            if (busqueda) url.searchParams.set('busqueda', busqueda); else url.searchParams.delete('busqueda');
+            if (modulo) url.searchParams.set('modulo', modulo); else url.searchParams.delete('modulo');
+            if (accion) url.searchParams.set('accion', accion); else url.searchParams.delete('accion');
+            if (fechaInicio) url.searchParams.set('fechainicio', fechaInicio); else url.searchParams.delete('fechainicio');
+            if (fechaFin) url.searchParams.set('fechafin', fechaFin); else url.searchParams.delete('fechafin');
+
+            window.location.href = url.toString();
+        });
+    </script>
 }

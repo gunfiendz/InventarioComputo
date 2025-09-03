@@ -2,7 +2,7 @@
 @model PrincipalModel
 @{
     ViewData["Title"] = "Dashboard Principal";
-    Layout = "_LayoutDashboard";
+    Layout = "_LayoutGeneral"; 
 }
 
 <div class="dashboard-container">
@@ -12,131 +12,162 @@
         <p class="beige-light">Rol: @Model.RolUsuario</p>
     </div>
 
-    <div class="quick-access">
-        <h3 class="beige-text">Accesos Rápidos</h3>
-        <div class="quick-links">
-            @if (Model.RolUsuario == "Técnico")
-            {
-                <a href="/Inventario/Formulario" class="quick-link beige-dark">
+    <div class="row mt-4">
+
+        <div class="col-lg-4 col-md-5">
+            <h3 class="beige-text">Módulos Principales</h3>
+            <div class="module-buttons">
+                <a href="/Inventario" class="module-btn">
                     <i class="fas fa-laptop"></i>
-                    <span>Nuevo Equipo</span>
+                    <div class="module-btn-text">
+                        <h5>Activos Fijos</h5>
+                        <p>@Model.TotalActivosFijos Registrados</p>
+                    </div>
                 </a>
-            }
 
-            @if (Model.RolUsuario == "Técnico")
-            {
-                <a href="/Asignaciones" class="quick-link beige-dark">
-                    <i class="fas fa-user-tie"></i>
-                    <span>Asignar Equipo</span>
+                <a href="/Mantenimientos" class="module-btn">
+                    <i class="fas fa-tools"></i>
+                    <div class="module-btn-text">
+                        <h5>Mantenimientos</h5>
+                        <p>@Model.TotalMantenimientos Registrados</p>
+                    </div>
                 </a>
-            }
 
-            @if (Model.RolUsuario == "Administrador")
-            {
-                <a href="/Inventario" class="quick-link beige-dark">
-                    <i class="fas fa-users-cog"></i>
-                    <span>Agregar Nuevo Activo Fijo</span>
+                <a href="/EquiposRegistrados" class="module-btn">
+                    <i class="fas fa-list-alt"></i>
+                    <div class="module-btn-text">
+                        <h5>Equipos Registrados</h5>
+                        <p>@Model.TotalEquiposRegistrados Perfiles</p>
+                    </div>
                 </a>
-            }
 
-            <a href="/Reportes" class="quick-link beige-dark">
-                <i class="fas fa-chart-bar"></i>
-                <span>Generar Reporte Inventario</span>
-            </a>
+                <a href="/Departamentos" class="module-btn">
+                    <i class="fas fa-sitemap"></i>
+                    <div class="module-btn-text">
+                        <h5>Departamentos</h5>
+                        <p>@Model.TotalDepartamentos Registrados</p>
+                    </div>
+                </a>
 
-            @if (Model.RolUsuario == "Auditor")
-            {
-                <a href="/Reportes" class="quick-link beige-dark">
-                    <i class="fas fa-users-cog"></i>
-                    <span>Generar Reporte Sucursales</span>
-                </a>
-            }
-            @if (Model.RolUsuario == "Auditor")
-            {
-                <a href="/Usuarios" class="quick-link beige-dark">
-                    <i class="fas fa-users-cog"></i>
-                    <span>Generar Reporte Mantenimientos</span>
-                </a>
-            }
-            @if (Model.RolUsuario == "Auditor")
-            {
-                <a href="/Usuarios" class="quick-link beige-dark">
-                    <i class="fas fa-users-cog"></i>
-                    <span>Generar Reporte Activos Fijos</span>
-                </a>
-            }
+                @if (Model.RolUsuario == "Administrador")
+                {
+                    <a href="/Empleados" class="module-btn">
+                        <i class="fas fa-users"></i>
+                        <div class="module-btn-text">
+                            <h5>Empleados</h5>
+                            <p>@Model.TotalEmpleados Registrados</p>
+                        </div>
+                    </a>
 
-            @if (Model.RolUsuario == "Administrador")
-            {
-                <a href="/Usuarios" class="quick-link beige-dark">
-                    <i class="fas fa-users-cog"></i>
-                    <span>Agregar Usuario</span>
-                </a>
-            }
-        </div>
-    </div>
-
-    <h3 class="beige-text">Acciones</h3>
-    <div class="summary-cards">
-        <div class="card beige-card">
-            <div class="card-body">
-                <h5 class="card-title">Activos Fijos</h5>
-                <p class="card-value">@Model.TotalActivosFijos</p>
-                <a href="/Inventario" class="btn btn-beige-sm">Gestionar</a>
+                    <a href="/Usuarios" class="module-btn">
+                        <i class="fas fa-user-shield"></i>
+                        <div class="module-btn-text">
+                            <h5>Usuarios</h5>
+                            <p>@Model.TotalUsuarios Registrados</p>
+                        </div>
+                    </a>
+                }
             </div>
         </div>
 
-        <div class="card beige-card">
-            <div class="card-body">
-                <h5 class="card-title">Mantenimientos</h5>
-                <p class="card-value">@Model.TotalMantenimientos</p>
-                <a href="/Mantenimientos" class="btn btn-beige-sm">Gestionar</a>
-            </div>
-        </div>
+        <div class="col-lg-8 col-md-7">
 
-        @if (Model.RolUsuario == "Administrador")
-        {
-            <div class="card beige-card">
-                <div class="card-body">
-                    <h5 class="card-title">Empleados</h5>
-                    <p class="card-value">@Model.TotalEmpleados</p>
-                    <a href="/Empleados" class="btn btn-beige-sm">Gestionar</a>
+            <div class="quick-access">
+                <h3 class="beige-text">Accesos Rápidos</h3>
+                <div class="quick-links">
+                    @if (Model.RolUsuario == "Técnico" || Model.RolUsuario == "Administrador")
+                    {
+                        <a href="/Inventario/Formulario" class="quick-link beige-dark">
+                            <i class="fas fa-plus"></i>
+                            <span>Nuevo Activo</span>
+                        </a>
+                        <a href="/Asignaciones" class="quick-link beige-dark">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Asignar Equipo</span>
+                        </a>
+                    }
+                    <a href="/Reportes" class="quick-link beige-dark">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Generar Reporte</span>
+                    </a>
+                    @if (Model.RolUsuario == "Administrador")
+                    {
+                        <a href="/Usuarios/FormularioUsuario" class="quick-link beige-dark">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Nuevo Usuario</span>
+                        </a>
+                        <a href="/Bitacora" class="quick-link beige-dark">
+                            <i class="fas fa-book"></i>
+                            <span>Bitácora</span>
+                        </a>
+                    }
                 </div>
             </div>
-        }
-    </div>
 
-    <div class="summary-cards">
-        <div class="card beige-card">
-            <div class="card-body">
-                <h5 class="card-title">Equipos Registrados</h5>
-                <p class="card-value">@Model.TotalEquiposRegistrados</p>
-                <a href="/EquiposRegistrados" class="btn btn-beige-sm">Gestionar</a>
-            </div>
-        </div>
+            <div class="statistics-section mt-4">
+                <h3 class="beige-text">Estadísticas Clave</h3>
 
-        <div class="card beige-card">
-            <div class="card-body">
-                <h5 class="card-title">Departamentos</h5>
-                <p class="card-value">@Model.TotalDepartamentos</p>
-                <a href="/Departamentos" class="btn btn-beige-sm">Gestionar</a>
-            </div>
-        </div>
+                <div class="row">
+                    <div class="col-lg-6 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-hourglass-end"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-value">@Model.ActivosPorVencer</div>
+                                <div class="stat-title">Activos con &lt; 1 año de vida útil</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-boxes-stacked"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-value">@Model.EquiposAsignados / @Model.EquiposEnAlmacen</div>
+                                <div class="stat-title">Asignados vs. En Almacén</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-        @if (Model.RolUsuario == "Administrador")
-        {
-
-            <div class="card beige-card">
-                <div class="card-body">
-                    <h5 class="card-title">Usuarios</h5>
-                    <p class="card-value">@Model.TotalUsuarios</p>
-                    <a href="/Usuarios" class="btn btn-beige-sm">Gestionar</a>
+                <div class="row">
+                    <div class="col-lg-6 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-tools"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-value">@Model.MantenimientosUltimoMes</div>
+                                <div class="stat-title">Mantenimientos (Últimos 30 días)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-3">
+                        <div class="list-card">
+                            <h6 class="list-card-header">
+                                <i class="fas fa-sitemap"></i> Top Departamentos
+                            </h6>
+                            <div class="list-card-body">
+                                @if (Model.TopDepartamentos.Any())
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        @foreach (var depto in Model.TopDepartamentos.Take(3))
+                                        {
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                @depto.NombreDepartamento
+                                                <span class="badge bg-beige-dark rounded-pill">@depto.CantidadEquipos</span>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p class="text-muted p-2">Sin datos.</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        }
 
+        </div>
     </div>
-
 </div>
 
 @section Styles {

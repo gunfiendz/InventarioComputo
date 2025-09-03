@@ -1,0 +1,137 @@
+﻿@page "{handler?}/{id:int?}"
+@model InventarioComputo.Pages.AsignarModel
+@{
+    // Título dinámico según el modo
+    ViewData["Title"] = Model.Modo == "Crear" ? "Nueva Asignación" : Model.Modo == "Editar" ? "Editar Asignación" : "Ver Asignación";
+    Layout = "_LayoutGeneral";
+    // Bandera para bloquear campos en modo "Ver"
+    bool esModoLectura = Model.Modo == "Ver";
+}
+
+<div class="container-form">
+    <h1 class="beige-text"><i class="fas fa-user-check"></i> @ViewData["Title"]</h1>
+
+    <form method="post" class="form-beige mt-4">
+        <input type="hidden" asp-for="Asignacion.IdEmpleadoEquipo" />
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <h5>1. Equipo a Asignar</h5>
+        <hr />
+        @if (Model.EsActivoPreseleccionado)
+        {
+            <div class="form-group">
+                <label>Equipo</label>
+                <input type="text" class="form-control" value="@Model.ActivoPreseleccionado?.Identificador" readonly />
+                <input type="hidden" asp-for="Asignacion.IdActivoFijo" />
+            </div>
+        }
+        else
+        {
+            <div class="form-group">
+                <label asp-for="Asignacion.IdActivoFijo"></label>
+                <select asp-for="Asignacion.IdActivoFijo" class="form-control input-beige" asp-items="@(new SelectList(Model.ActivosDisponibles, "Id", "Identificador"))">
+                    <option value="">-- Seleccione un equipo disponible --</option>
+                </select>
+                <span asp-validation-for="Asignacion.IdActivoFijo" class="text-danger"></span>
+            </div>
+        }
+
+        <h5 class="mt-4">2. Datos de la Asignación</h5>
+        <hr />
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label asp-for="Asignacion.IdEmpleado"></label>
+                    <select asp-for="Asignacion.IdEmpleado" class="form-control input-beige" id="selectEmpleado" asp-items="@(new SelectList(Model.Empleados, "Id", "Nombre"))" disabled="@esModoLectura">
+                        <option value="">-- Seleccione un empleado --</option>
+                    </select>
+                    <span asp-validation-for="Asignacion.IdEmpleado" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label asp-for="Asignacion.IdDepartamento"></label>
+                    <select asp-for="Asignacion.IdDepartamento" class="form-control input-beige" id="selectDepartamento" asp-items="@(new SelectList(Model.Departamentos, "Id", "Nombre"))" disabled="@esModoLectura">
+                        <option value="">-- Seleccione un departamento --</option>
+                    </select>
+                    <span asp-validation-for="Asignacion.IdDepartamento" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label asp-for="Asignacion.TipoAsignacion"></label>
+                    <select asp-for="Asignacion.TipoAsignacion" class="form-select input-beige" disabled="@esModoLectura">
+                        <option value="">-- Seleccione tipo --</option>
+                        <option value="Nueva">Nueva</option>
+                        <option value="Reasignación">Reasignación</option>
+                        <option value="Préstamo Temporal">Préstamo Temporal</option>
+                        <option value="Reemplazo">Reemplazo</option>
+                    </select>
+                    <span asp-validation-for="Asignacion.TipoAsignacion" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label asp-for="Asignacion.FechaAsignacion"></label>
+                    <input asp-for="Asignacion.FechaAsignacion" type="date" class="form-control" readonly="@esModoLectura" />
+                    <span asp-validation-for="Asignacion.FechaAsignacion" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label asp-for="Asignacion.DetallesAsignacion"></label>
+            <textarea asp-for="Asignacion.DetallesAsignacion" class="form-control" rows="2" placeholder="Ej: Equipo nuevo para proyecto X..." readonly="@esModoLectura"></textarea>
+        </div>
+        <div class="form-group">
+            <label asp-for="Asignacion.DetallesRetiro"></label>
+            <textarea asp-for="Asignacion.DetallesRetiro" class="form-control" rows="2" placeholder="Si esta asignación reemplaza una anterior..." readonly="@esModoLectura"></textarea>
+        </div>
+
+        <div class="form-actions mt-4">
+            @if (Model.Modo == "Crear")
+            {
+                <button type="submit" class="btn btn-beige">Confirmar Asignación</button>
+            }
+            @if (Model.Modo == "Editar")
+            {
+                <button type="submit" class="btn btn-beige">Actualizar</button>
+            }
+            @if (Model.Modo == "Ver")
+            {
+                <a asp-page="Asignar" asp-page-handler="Editar" asp-route-id="@Model.Asignacion.IdEmpleadoEquipo" class="btn btn-beige">Editar</a>
+            }
+            <a href="/Asignaciones/Index" class="btn btn-cancelar">Volver al Historial</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Script para que el depto se ponga solo al elegir empleado
+            const empleadoSelect = document.getElementById('selectEmpleado');
+            const departamentoSelect = document.getElementById('selectDepartamento');
+
+            empleadoSelect.addEventListener('change', async function () {
+                const empleadoId = this.value;
+                if (!empleadoId) {
+                    departamentoSelect.value = "";
+                    return;
+                }
+                try {
+                    const response = await fetch(`/Asignar?handler=EmpleadoInfo&idEmpleado=${empleadoId}`);
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    if (data.idDepartamento) {
+                        departamentoSelect.value = data.idDepartamento;
+                    }
+                } catch (error) {
+                    console.error("Error al obtener info del empleado:", error);
+                }
+            });
+        });
+    </script>
+}

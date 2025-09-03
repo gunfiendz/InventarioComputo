@@ -6,6 +6,10 @@ using System.Diagnostics;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
+using System; // Agregado por si acaso
+using System.Collections.Generic; // Agregado por si acaso
+using Microsoft.Extensions.Logging; // Agregado por si acaso
+
 
 public class IndexModel : PageModel
 {
@@ -59,7 +63,9 @@ public class IndexModel : PageModel
                         {
                             new Claim(ClaimTypes.Name, Username),
                             new Claim(ClaimTypes.NameIdentifier, reader["id_usuario"].ToString()),
-                            new Claim(ClaimTypes.Role, reader["NombreRol"].ToString())
+                            new Claim(ClaimTypes.Role, reader["NombreRol"].ToString()),
+                            // --- LÍNEA CORREGIDA ---
+                            new Claim("id_usuario", reader["id_usuario"].ToString())
                         };
 
                         var claimsIdentity = new ClaimsIdentity(

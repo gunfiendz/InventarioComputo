@@ -18,7 +18,6 @@
     <Content Remove="Pages\Departamentos\FormularioDepartamentos.cshtml" />
     <Content Remove="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
     <Content Remove="Pages\Sucursales.cshtml" />
-    <Content Remove="Pages\Usuarios\PermisosUsuario.cshtml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,7 +25,6 @@
     <_ContentIncludedByDefault Remove="Pages\Departamentos\FormularioDepartamentos.cshtml" />
     <_ContentIncludedByDefault Remove="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
     <_ContentIncludedByDefault Remove="Pages\Sucursales.cshtml" />
-    <_ContentIncludedByDefault Remove="Pages\Usuarios\PermisosUsuario.cshtml" />
     <_ContentIncludedByDefault Remove="wwwroot\Styles\Style_LayoutDashboard.css" />
   </ItemGroup>
 
@@ -35,7 +33,6 @@
     <None Include="Pages\Departamentos\FormularioDepartamentos.cshtml" />
     <None Include="Pages\Departamentos\Index.cshtml" />
     <None Include="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
-    <None Include="Pages\Usuarios\PermisosUsuario.cshtml" />
     <None Include="wwwroot\css\.DS_Store" />
     <None Include="wwwroot\Styles\Style_Index.css" />
   </ItemGroup>
@@ -53,10 +50,6 @@
 
   <ItemGroup>
     <UpToDateCheckInput Remove="Pages\Sucursales.cshtml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <UpToDateCheckInput Remove="Pages\Usuarios\PermisosUsuario.cshtml" />
   </ItemGroup>
 
   <ItemGroup>
