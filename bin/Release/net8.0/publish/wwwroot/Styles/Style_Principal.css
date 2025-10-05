@@ -1,0 +1,160 @@
+﻿/* ============================================= */
+/* ========= ESTRUCTURA PRINCIPAL SIN SCROLL ==== */
+/* ============================================= */
+.dashboard-container {
+    padding: 1rem 1.5rem; /* Reducimos y ajustamos el padding */
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-row {
+    flex-grow: 1; /* Hace que la fila de dos columnas crezca para llenar el espacio */
+    overflow: hidden; /* Evita que la fila principal tenga scroll */
+    margin-top: 1rem;
+}
+
+/* Hacemos que las columnas también sean contenedores flexibles */
+.col-lg-4, .col-lg-8 {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ocupan toda la altura de la fila */
+}
+
+/* LA CLAVE: los contenedores de contenido interno son los que tendrán scroll si es necesario */
+.module-buttons, .right-column-content {
+    overflow-y: auto; /* APLICA SCROLL VERTICAL SÓLO SI SE NECESITA */
+    flex-grow: 1;
+    padding-right: 10px; /* Espacio para la barra de scroll */
+}
+
+/* ============================================= */
+/* ========= ESTILOS DE COMPONENTES ============ */
+/* ============================================= */
+.beige-text { color: #5a4a3a; }
+.beige-light { color: #d2b48c; }
+.beige-dark { color: #8b7355; }
+.beige-bg { background-color: #eae1dc; }
+
+.dashboard-bienvenida {
+    text-align: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #d2b48c;
+    flex-shrink: 0; /* Evita que este div se encoja */
+}
+
+/* Columna Izquierda: Módulos */
+.module-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem; /* Reducimos el espacio entre botones */
+}
+
+.module-btn {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: white;
+    border: 1px solid #d2b48c;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.3s;
+    color: #5a4a3a;
+    flex-shrink: 0;
+}
+
+.module-btn:hover {
+    transform: translateX(5px);
+    box-shadow: 0 8px 15px rgba(210, 180, 140, 0.2);
+    border-color: #8b7355;
+}
+
+.module-btn i {
+    font-size: 1.5rem;
+    color: #8b7355;
+    margin-right: 1rem;
+    width: 25px;
+    text-align: center;
+}
+
+.module-btn-text h5 { margin: 0; font-size: 1rem; font-weight: 600; }
+.module-btn-text p { margin: 0; font-size: 0.8rem; color: #8b7355; }
+
+/* Columna Derecha: Accesos y Stats */
+.quick-access { margin-bottom: 1.5rem; }
+.quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.75rem;
+}
+
+.quick-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    background-color: white;
+    border: 1px solid #d2b48c;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.3s;
+    text-align: center;
+}
+
+.quick-link:hover {
+    background-color: #f5f5dc;
+    transform: scale(1.05);
+}
+
+.quick-link i { font-size: 1.3rem; margin-bottom: 0.5rem; color: #8b7355; }
+.quick-link span { color: #5a4a3a; font-weight: 500; font-size: 0.85rem; }
+
+/* Estadísticas */
+.stat-card {
+    display: flex;
+    align-items: center;
+    background-color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #d2b48c;
+    transition: all 0.2s;
+    height: 100%;
+}
+.stat-icon { font-size: 1.5rem; color: #8b7355; margin-right: 1rem; }
+.stat-value { font-size: 1.3rem; font-weight: 700; color: #5a4a3a; }
+.stat-title { font-size: 0.8rem; color: #8b7355; }
+
+.list-card {
+    background-color: white;
+    border-radius: 8px;
+    border: 1px solid #d2b48c;
+    overflow: hidden;
+    height: 100%;
+}
+.list-card-header {
+    padding: 0.5rem 1rem;
+    background-color: #f7f2ec;
+    border-bottom: 1px solid #d2b48c;
+    color: #5a4a3a;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.list-card .list-group-item {
+    background-color: transparent;
+    border: none;
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+}
+.bg-beige-dark {
+    background-color: #8b7355;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    html, body { overflow: auto; } /* Habilita el scroll normal en móvil */
+    .dashboard-container { padding: 1rem; }
+    .main-row { flex-direction: column; overflow: visible; }
+    .module-buttons, .right-column-content { overflow-y: visible; }
+}

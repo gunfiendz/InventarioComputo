@@ -32,4 +32,7 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
+
 app.Run();

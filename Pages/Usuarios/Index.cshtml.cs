@@ -7,12 +7,15 @@ using System;
 using System.Security.Claims;
 using System.Linq;
 using System.Data;
+using Microsoft.Extensions.Logging;
+using InventarioComputo.Data;
 
 namespace InventarioComputo.Pages.Usuarios
 {
     public class UsuariosModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
+        private readonly ILogger<UsuariosModel> _logger;
 
         public List<UsuarioViewModel> Usuarios { get; set; } = new List<UsuarioViewModel>();
         public List<Empleado> Empleados { get; set; } = new List<Empleado>();
@@ -26,9 +29,10 @@ namespace InventarioComputo.Pages.Usuarios
         public string RolFilter { get; set; }
         public string BusquedaFilter { get; set; }
 
-        public UsuariosModel(ConexionBDD dbConnection)
+        public UsuariosModel(ConexionBDD dbConnection, ILogger<UsuariosModel> logger)
         {
             _dbConnection = dbConnection;
+            _logger = logger;
         }
 
         public async Task OnGetAsync(
@@ -70,7 +74,7 @@ namespace InventarioComputo.Pages.Usuarios
             }
             catch (Exception ex)
             {
-                // Manejar error
+                _logger.LogError(ex, "Error al cargar Usuarios.Index");
             }
         }
 
@@ -175,7 +179,6 @@ namespace InventarioComputo.Pages.Usuarios
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 {
-                    // Eliminar permisos asociados
                     var deletePermisosQuery = "DELETE FROM PermisosUsuarios WHERE id_usuario = @Id";
                     using (var cmd = new SqlCommand(deletePermisosQuery, connection))
                     {
@@ -190,12 +193,30 @@ namespace InventarioComputo.Pages.Usuarios
                         await cmd.ExecuteNonQueryAsync();
                     }
                 }
+
+                try
+                {
+                    var detalles = $"Se eliminó el usuario (ID: {id}).";
+                    await BitacoraHelper.RegistrarAccionAsync(
+                        _dbConnection,
+                        _logger,
+                        User,
+                        BitacoraConstantes.Modulos.Usuarios,
+                        BitacoraConstantes.Acciones.Eliminacion,
+                        detalles
+                    );
+                }
+                catch (Exception exBit)
+                {
+                    _logger.LogError(exBit, "Error al registrar Bitácora de eliminación de usuario Id={Id}", id);
+                }
+
                 TempData["Mensaje"] = "¡El usuario ha sido eliminado correctamente!";
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Error al eliminar el usuario: {ex.Message}";
-                Console.WriteLine($"Error al eliminar el usuario: {ex.Message}");
+                _logger.LogError(ex, "Error al eliminar el usuario Id={Id}", id);
             }
             return RedirectToPage();
         }

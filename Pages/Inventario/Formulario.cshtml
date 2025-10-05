@@ -9,7 +9,7 @@
 <div class="container-form">
     <h1 class="beige-text"><i class="fas fa-laptop"></i> @ViewData["Title"]</h1>
 
-    <form method="post" class="form-beige">
+    <form method="post" class="form-beige" asp-antiforgery="true">
         <input type="hidden" asp-for="Equipo.IdActivoFijo" />
         <div class="row">
             <div class="col-md-7">
@@ -17,10 +17,7 @@
 
                 <div class="form-group"><label asp-for="Equipo.NumeroSerie" class="form-label"></label><input asp-for="Equipo.NumeroSerie" class="form-control" readonly="@esModoLectura" /><span asp-validation-for="Equipo.NumeroSerie" class="text-danger"></span></div>
                 <div class="form-group"><label asp-for="Equipo.EtiquetaInv" class="form-label"></label><input asp-for="Equipo.EtiquetaInv" class="form-control" readonly="@esModoLectura" /><span asp-validation-for="Equipo.EtiquetaInv" class="text-danger"></span></div>
-                <div class="form-group"><label asp-for="Equipo.IdTipoEquipo" class="form-label"></label><select asp-for="Equipo.IdTipoEquipo" class="form-control input-beige" id="tipoEquipo" disabled="@esModoLectura"><option value="">-- Seleccione un tipo --</option>@foreach (var tipo in Model.TiposEquipos)
-                        {
-                            <option value="@tipo.Id" selected="@(tipo.Id == Model.Equipo?.IdTipoEquipo)">@tipo.Nombre</option>
-                        }</select></div>
+                <div class="form-group"><label asp-for="Equipo.IdTipoEquipo" class="form-label"></label><select asp-for="Equipo.IdTipoEquipo" class="form-control input-beige" id="tipoEquipo" disabled="@esModoLectura" asp-items="@(new SelectList(Model.TiposEquipos, "Id", "Nombre"))"><option value="">-- Seleccione un tipo --</option></select></div>
                 <div class="form-group"><label asp-for="Equipo.IdMarca" class="form-label"></label><select asp-for="Equipo.IdMarca" class="form-control input-beige" id="marca" disabled="@esModoLectura"><option value="">-- Seleccione un tipo primero --</option></select></div>
                 <div class="form-group"><label asp-for="Equipo.IdModelo" class="form-label"></label><select asp-for="Equipo.IdModelo" class="form-control input-beige" id="modelo" disabled="@esModoLectura"><option value="">-- Seleccione una marca primero --</option></select></div>
                 <div class="form-group"><label asp-for="Equipo.IdPerfil" class="form-label"></label><select asp-for="Equipo.IdPerfil" class="form-control input-beige" id="perfil" disabled="@esModoLectura"><option value="">-- Seleccione un modelo primero --</option></select></div>
@@ -37,8 +34,16 @@
                     <div class="card-body" id="caracteristicas-container"><p class="text-muted">Seleccione un perfil para ver sus características.</p></div>
                 </div>
                 <div class="card caracteristicas-card">
-                    <div class="card-header"><h6><i class="fas fa-compact-disc"></i> Software Preinstalado</h6></div>
-                    <div class="card-body software-list">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6><i class="fas fa-compact-disc"></i> Software Preinstalado</h6>
+                        @if (!esModoLectura)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-beige" data-bs-toggle="modal" data-bs-target="#addSoftwareModal" title="Agregar Nuevo Software">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        }
+                    </div>
+                    <div class="card-body software-list" id="software-list-container">
                         @if (Model.SoftwareDisponible.Any())
                         {
                             @for (int i = 0; i < Model.SoftwareDisponible.Count; i++)
@@ -54,7 +59,7 @@
                         }
                         else
                         {
-                            <p class="text-muted">No hay software disponible para agregar.</p>
+                            <p class="text-muted" id="no-software-msg">No hay software disponible para agregar.</p>
                         }
                     </div>
                 </div>
@@ -63,18 +68,36 @@
         <div class="form-actions mt-4">
             @if (!esModoLectura)
             {
-                <button type="submit" class="btn btn-beige">Guardar</button>
-
-                <a href="/Inventario" class="btn btn-cancelar">Cancelar</a>
+                <button type="submit" class="btn btn-beige">Guardar</button> <a href="/Inventario" class="btn btn-cancelar">Cancelar</a>
             }
             else
             {
-                <a href="/Inventario/Formulario/Editar/@Model.Equipo.IdActivoFijo" class="btn btn-beige">Editar</a>
-
-                <a href="/Inventario" class="btn btn-cancelar">Volver</a>
+                <a href="/Inventario/Formulario/Editar/@Model.Equipo.IdActivoFijo" class="btn btn-beige">Editar</a> <a href="/Inventario" class="btn btn-cancelar">Volver</a>
             }
         </div>
     </form>
+</div>
+
+<div class="modal fade" id="addSoftwareModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Nuevo Software</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-software-alert" class="alert alert-danger d-none"></div>
+                <div class="form-group mb-2"><label for="newSoftwareNombre" class="form-label">Nombre</label><input type="text" id="newSoftwareNombre" class="form-control" /></div>
+                <div class="form-group mb-2"><label for="newSoftwareTipo" class="form-label">Tipo de Software</label><select id="newSoftwareTipo" class="form-select" asp-items="Model.TiposSoftware"><option value="">-- Seleccione --</option></select></div>
+                <div class="form-group mb-2"><label for="newSoftwareVersion" class="form-label">Versión (Opcional)</label><input type="text" id="newSoftwareVersion" class="form-control" /></div>
+                <div class="form-group"><label for="newSoftwareProveedor" class="form-label">Proveedor (Opcional)</label><input type="text" id="newSoftwareProveedor" class="form-control" /></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-beige" id="btn-modal-save-software">Guardar</button>
+                <button type="button" class="btn btn-cancelar" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -87,109 +110,71 @@
             const modeloSelect = document.getElementById('modelo');
             const perfilSelect = document.getElementById('perfil');
 
-            function setupEventListeners() {
-                if (esModoLectura) return;
-                tipoSelect.addEventListener('change', cargarMarcas);
-                marcaSelect.addEventListener('change', cargarModelos);
-                modeloSelect.addEventListener('change', cargarPerfiles);
-                perfilSelect.addEventListener('change', () => cargarCaracteristicas(perfilSelect.value));
-            }
+            function setupEventListeners() { if (esModoLectura) return; tipoSelect.addEventListener('change', cargarMarcas); marcaSelect.addEventListener('change', cargarModelos); modeloSelect.addEventListener('change', cargarPerfiles); perfilSelect.addEventListener('change', () => cargarCaracteristicas(perfilSelect.value)); }
+            async function cargarDatosIniciales() { if (tipoSelect.value) { await cargarMarcas(); if (marcaSelect.value) { await cargarModelos(); if (modeloSelect.value) { await cargarPerfiles(); } } } if (perfilSelect.value) { cargarCaracteristicas(perfilSelect.value); } }
+            async function fetchJson(url) { const response = await fetch(url); if (!response.ok) { throw new Error(`Error HTTP ${response.status}`); } return response.json(); }
+            function populateDropdown(select, items, defaultOption, selectedValue = 0) { select.innerHTML = `<option value="">${defaultOption}</option>`; items.forEach(item => { const option = document.createElement('option'); option.value = item.id; option.textContent = item.nombre; if (item.id == selectedValue) { option.selected = true; } select.appendChild(option); }); select.disabled = esModoLectura || items.length === 0; }
+            function resetDropdown(select, message) { select.innerHTML = `<option value="">${message}</option>`; select.disabled = true; }
+            async function cargarMarcas() { if (!tipoSelect.value) { resetDropdown(marcaSelect, '-- Seleccione tipo --'); resetDropdown(modeloSelect, '-- Seleccione marca --'); resetDropdown(perfilSelect, '-- Seleccione modelo --'); return; } resetDropdown(marcaSelect, 'Cargando...'); try { const marcas = await fetchJson(`/Inventario/Formulario?handler=MarcasPorTipo&tipoId=${tipoSelect.value}`); populateDropdown(marcaSelect, marcas, '-- Seleccione marca --', '@Model.Equipo.IdMarca'); } catch (e) { resetDropdown(marcaSelect, '-- Error --'); } }
+            async function cargarModelos() { if (!marcaSelect.value) { resetDropdown(modeloSelect, '-- Seleccione marca --'); resetDropdown(perfilSelect, '-- Seleccione modelo --'); return; } resetDropdown(modeloSelect, 'Cargando...'); try { const modelos = await fetchJson(`/Inventario/Formulario?handler=ModelosPorMarcaYTipo&marcaId=${marcaSelect.value}&tipoId=${tipoSelect.value}`); populateDropdown(modeloSelect, modelos, '-- Seleccione modelo --', '@Model.Equipo.IdModelo'); } catch (e) { resetDropdown(modeloSelect, '-- Error --'); } }
+            async function cargarPerfiles() { if (!modeloSelect.value) { resetDropdown(perfilSelect, '-- Seleccione modelo --'); return; } resetDropdown(perfilSelect, 'Cargando...'); try { const perfiles = await fetchJson(`/Inventario/Formulario?handler=PerfilesPorModelo&modeloId=${modeloSelect.value}`); populateDropdown(perfilSelect, perfiles, '-- Seleccione perfil --', '@Model.Equipo.IdPerfil'); } catch (e) { resetDropdown(perfilSelect, '-- Error --'); } }
+            async function cargarCaracteristicas(perfilId) { const container = document.getElementById('caracteristicas-container'); if (!perfilId) { container.innerHTML = '<p class="text-muted">Seleccione un perfil para ver sus características.</p>'; return; } container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>'; try { const caracteristicas = await fetchJson(`/Inventario/Formulario?handler=CaracteristicasPorPerfil&perfilId=${perfilId}`); if (caracteristicas.length > 0) { let html = '<ul class="list-group list-group-flush">'; caracteristicas.forEach(car => { html += `<li class="list-group-item"><strong>${car.nombre}:</strong> ${car.valor}</li>`; }); html += '</ul>'; container.innerHTML = html; } else { container.innerHTML = '<p class="text-muted">No hay características para este perfil.</p>'; } } catch (e) { container.innerHTML = '<p class="text-danger">Error al cargar características.</p>'; } }
 
-            async function cargarDatosIniciales() {
-                if (tipoSelect.value) {
-                    await cargarMarcas();
-                    if (marcaSelect.value) {
-                        await cargarModelos();
-                        if (modeloSelect.value) { await cargarPerfiles(); }
-                    }
-                }
-                if (perfilSelect.value) { cargarCaracteristicas(perfilSelect.value); }
+            function toggleLicenseInput(checkbox) {
+                const licenseInput = checkbox.closest('.software-item').querySelector('.licencia-input');
+                if (checkbox.checked) { licenseInput.style.display = 'block'; } else { licenseInput.style.display = 'none'; licenseInput.value = ''; }
             }
-
-            async function fetchJson(url) {
-                const response = await fetch(url);
-                if (!response.ok) { throw new Error(`Error HTTP ${response.status}`); }
-                return response.json();
-            }
-
-            function populateDropdown(select, items, defaultOption, selectedValue = 0) {
-                select.innerHTML = `<option value="">${defaultOption}</option>`;
-                items.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.id;
-                    option.textContent = item.nombre;
-                    if (item.id == selectedValue) { option.selected = true; }
-                    select.appendChild(option);
-                });
-                select.disabled = esModoLectura || items.length === 0;
-            }
-
-            function resetDropdown(select, message) {
-                select.innerHTML = `<option value="">${message}</option>`;
-                select.disabled = true;
-            }
-
-            async function cargarMarcas() {
-                if (!tipoSelect.value) {
-                    resetDropdown(marcaSelect, '-- Seleccione tipo --'); resetDropdown(modeloSelect, '-- Seleccione marca --'); resetDropdown(perfilSelect, '-- Seleccione modelo --'); return;
-                }
-                resetDropdown(marcaSelect, 'Cargando...');
-                try {
-                    const marcas = await fetchJson(`/Inventario/Formulario?handler=MarcasPorTipo&tipoId=${tipoSelect.value}`);
-                    populateDropdown(marcaSelect, marcas, '-- Seleccione marca --', '@Model.Equipo.IdMarca');
-                } catch (e) { resetDropdown(marcaSelect, '-- Error --'); }
-            }
-
-            async function cargarModelos() {
-                if (!marcaSelect.value) {
-                    resetDropdown(modeloSelect, '-- Seleccione marca --'); resetDropdown(perfilSelect, '-- Seleccione modelo --'); return;
-                }
-                resetDropdown(modeloSelect, 'Cargando...');
-                try {
-                    const modelos = await fetchJson(`/Inventario/Formulario?handler=ModelosPorMarcaYTipo&marcaId=${marcaSelect.value}&tipoId=${tipoSelect.value}`);
-                    populateDropdown(modeloSelect, modelos, '-- Seleccione modelo --', '@Model.Equipo.IdModelo');
-                } catch (e) { resetDropdown(modeloSelect, '-- Error --'); }
-            }
-
-            async function cargarPerfiles() {
-                if (!modeloSelect.value) {
-                    resetDropdown(perfilSelect, '-- Seleccione modelo --'); return;
-                }
-                resetDropdown(perfilSelect, 'Cargando...');
-                try {
-                    const perfiles = await fetchJson(`/Inventario/Formulario?handler=PerfilesPorModelo&modeloId=${modeloSelect.value}`);
-                    populateDropdown(perfilSelect, perfiles, '-- Seleccione perfil --', '@Model.Equipo.IdPerfil');
-                } catch (e) { resetDropdown(perfilSelect, '-- Error --'); }
-            }
-
-            async function cargarCaracteristicas(perfilId) {
-                const container = document.getElementById('caracteristicas-container');
-                if (!perfilId) { container.innerHTML = '<p class="text-muted">Seleccione un perfil para ver sus características.</p>'; return; }
-                container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
-                try {
-                    const caracteristicas = await fetchJson(`/Inventario/Formulario?handler=CaracteristicasPorPerfil&perfilId=${perfilId}`);
-                    if (caracteristicas.length > 0) {
-                        let html = '<ul class="list-group list-group-flush">';
-                        caracteristicas.forEach(car => { html += `<li class="list-group-item"><strong>${car.nombre}:</strong> ${car.valor}</li>`; });
-                        html += '</ul>';
-                        container.innerHTML = html;
-                    } else { container.innerHTML = '<p class="text-muted">No hay características para este perfil.</p>'; }
-                } catch (e) { container.innerHTML = '<p class="text-danger">Error al cargar características.</p>'; }
-            }
+            document.querySelectorAll('.software-checkbox').forEach(checkbox => { checkbox.addEventListener('change', () => toggleLicenseInput(checkbox)); });
 
             setupEventListeners();
             cargarDatosIniciales();
 
-            document.querySelectorAll('.software-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function () {
-                    const licenseInput = this.closest('.software-item').querySelector('.licencia-input');
-                    if (this.checked) {
-                        licenseInput.style.display = 'block';
-                    } else {
-                        licenseInput.style.display = 'none';
-                        licenseInput.value = '';
-                    }
-                });
+            const softwareModal = document.getElementById('addSoftwareModal');
+            const saveSoftwareBtn = document.getElementById('btn-modal-save-software');
+            const softwareAlert = document.getElementById('modal-software-alert');
+            const softwareListContainer = document.getElementById('software-list-container');
+
+            saveSoftwareBtn.addEventListener('click', async function () {
+                const body = {
+                    Nombre: document.getElementById('newSoftwareNombre').value,
+                    IdTipoSoftware: parseInt(document.getElementById('newSoftwareTipo').value),
+                    Version: document.getElementById('newSoftwareVersion').value,
+                    Proveedor: document.getElementById('newSoftwareProveedor').value
+                };
+
+                try {
+                    const response = await fetch('/Inventario/Formulario?handler=AddSoftware', { method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value }, body: JSON.stringify(body) });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const newIndex = softwareListContainer.querySelectorAll('.form-check').length;
+                        const noSoftwareMsg = document.getElementById('no-software-msg');
+                        if (noSoftwareMsg) noSoftwareMsg.remove();
+
+                        const newCheckHtml = `
+                                    <div class="form-check software-item">
+                                        <input type="hidden" name="SoftwareDisponible[${newIndex}].Id" value="${result.id}" />
+                                        <input type="hidden" name="SoftwareDisponible[${newIndex}].Nombre" value="${result.text}" />
+                                        <input class="form-check-input software-checkbox" type="checkbox" name="SoftwareDisponible[${newIndex}].IsSelected" id="SoftwareDisponible_${newIndex}__IsSelected" value="true" checked />
+                                        <label class="form-check-label" for="SoftwareDisponible_${newIndex}__IsSelected">${result.text}</label>
+                                        <input type="text" name="SoftwareDisponible[${newIndex}].ClaveLicencia" class="form-control form-control-sm licencia-input" placeholder="Clave de Licencia (opcional)" style="display: block;" />
+                                    </div>`;
+                        softwareListContainer.insertAdjacentHTML('beforeend', newCheckHtml);
+
+                        const newCheckbox = softwareListContainer.querySelector(`input[name="SoftwareDisponible[${newIndex}].IsSelected"]`);
+                        newCheckbox.addEventListener('change', () => toggleLicenseInput(newCheckbox));
+
+                        bootstrap.Modal.getInstance(softwareModal).hide();
+                    } else { softwareAlert.textContent = result.message || 'Error al guardar.'; softwareAlert.classList.remove('d-none'); }
+                } catch (e) { softwareAlert.textContent = 'Error de conexión.'; softwareAlert.classList.remove('d-none'); }
+            });
+
+            softwareModal.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('newSoftwareNombre').value = '';
+                document.getElementById('newSoftwareTipo').selectedIndex = 0;
+                document.getElementById('newSoftwareVersion').value = '';
+                document.getElementById('newSoftwareProveedor').value = '';
+                softwareAlert.classList.add('d-none');
             });
         });
     </script>

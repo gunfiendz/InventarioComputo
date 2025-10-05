@@ -1,0 +1,213 @@
+﻿@page
+@model InventarioComputo.Pages.Reportes.ReportesModel
+@{
+    ViewData["Title"] = "Reportes";
+    Layout = "_LayoutGeneral";
+}
+
+<div class="container mt-3">
+    <h3>Generación de Reportes</h3>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-success">@TempData["Mensaje"]</div>
+    }
+
+    <!-- El form envía a ?handler=Generar (descargas). La previsualización llama a ?handler=Preview via JS en un iframe -->
+    <form id="frmReportes" method="get" asp-page-handler="Generar" class="border p-3 rounded bg-light">
+        <div class="row g-3 align-items-end">
+
+            <!-- Sección -->
+            <div class="col-md-4">
+                <label class="form-label">Sección</label>
+                @{
+                    var selAF = Model.Seccion == "ActivosFijos" ? "selected" : null;
+                    var selAsig = Model.Seccion == "Asignaciones" ? "selected" : null;
+                    var selBit = Model.Seccion == "Bitacora" ? "selected" : null;
+                    var selEmp = Model.Seccion == "Empleados" ? "selected" : null;
+                    var selMant = Model.Seccion == "Mantenimientos" ? "selected" : null;
+                    var selUsr = Model.Seccion == "Usuarios" ? "selected" : null;
+                }
+                <select class="form-select" id="seccion" name="seccion" onchange="onSeccionChange(); loadPreview(); toggleDownloadButtons();">
+                    <option value="">-- Seleccione --</option>
+                    <option value="ActivosFijos" selected="@selAF">Activos Fijos</option>
+                    <option value="Asignaciones" selected="@selAsig">Asignaciones</option>
+                    <option value="Bitacora" selected="@selBit">Bitácora</option>
+                    <option value="Empleados" selected="@selEmp">Empleados</option>
+                    <option value="Mantenimientos" selected="@selMant">Mantenimientos</option>
+                    <option value="Usuarios" selected="@selUsr">Usuarios</option>
+                </select>
+            </div>
+
+            <!-- Filtros: Activos Fijos -->
+            <div class="col-md-8" id="filtros-af" style="display:none;">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Departamento</label>
+                        <select class="form-select" name="idDepartamento" onchange="loadPreview()">
+                            <option value="">Todos</option>
+                            @foreach (var d in Model.Departamentos)
+                            {
+                                var sel = Model.IdDepartamento == d.Id ? "selected" : null;
+                                <option value="@d.Id" selected="@sel">@d.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Perfil</label>
+                        <select class="form-select" name="idPerfil" onchange="loadPreview()">
+                            <option value="">Todos</option>
+                            @foreach (var p in Model.Perfiles)
+                            {
+                                var sel = Model.IdPerfil == p.Id ? "selected" : null;
+                                <option value="@p.Id" selected="@sel">@p.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select" name="estado" onchange="loadPreview()">
+                            <option value="">Todos</option>
+                            @foreach (var e in Model.EstadosLista)
+                            {
+                                var sel = Model.Estado == e.Nombre ? "selected" : null;
+                                <option value="@e.Nombre" selected="@sel">@e.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Búsqueda (EtiquetaInv / S/N)</label>
+                        <input type="text" class="form-control" name="texto" value="@Model.TextoBusqueda" onblur="loadPreview()" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros: Mantenimientos -->
+            <div class="col-md-8" id="filtros-mant" style="display:none;">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Desde</label>
+                        <input type="date" class="form-control" name="fechaInicio" value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Hasta</label>
+                        <input type="date" class="form-control" name="fechaFin" value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Equipo (AF)</label>
+                        <select class="form-select" name="idEquipo" onchange="loadPreview()">
+                            <option value="">Todos</option>
+                            @foreach (var eq in Model.Equipos)
+                            {
+                                var sel = Model.IdEquipo == eq.Id ? "selected" : null;
+                                <option value="@eq.Id" selected="@sel">@eq.EtiquetaInv - @eq.NumeroSerie</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Técnico</label>
+                        <select class="form-select" name="idTecnico" onchange="loadPreview()">
+                            <option value="">Todos</option>
+                            @foreach (var t in Model.Tecnicos)
+                            {
+                                var sel = Model.IdTecnico == t.Id ? "selected" : null;
+                                <option value="@t.Id" selected="@sel">@t.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="col-12 d-flex gap-2 mt-3">
+                <!-- Forzamos el handler explícitamente por botón -->
+                <button id="btnPdf" type="submit" formaction="?handler=Generar" name="formato" value="PDF" class="btn btn-primary">Descargar PDF</button>
+                <button id="btnXlsx" type="submit" formaction="?handler=Generar" name="formato" value="EXCELOPENXML" class="btn btn-success">Descargar Excel</button>
+                <button id="btnDocx" type="submit" formaction="?handler=Generar" name="formato" value="WORDOPENXML" class="btn btn-secondary">Descargar Word</button>
+
+                <button type="button" class="btn btn-outline-primary ms-auto" onclick="loadPreview()">Previsualizar</button>
+                <a asp-page="./Index" class="btn btn-outline-dark">Limpiar</a>
+            </div>
+        </div>
+    </form>
+
+    <!-- Previsualización -->
+    <div class="mt-4">
+        <h5 class="mb-2">Previsualización</h5>
+        <div class="border rounded" style="height: 75vh;">
+            <iframe id="previewFrame" title="Vista previa del reporte" style="width:100%; height:100%; border:0;"></iframe>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function buildPreviewUrl() {
+            const f = document.getElementById('frmReportes');
+            const seccion = f.querySelector('[name="seccion"]').value;
+            if (!seccion) return ''; // sin sección, no generamos previa
+
+            const params = new URLSearchParams();
+            params.set('handler', 'Preview');
+            params.set('seccion', seccion);
+
+            // Filtros comunes
+            const idDep = f.querySelector('[name="idDepartamento"]')?.value || '';
+            const idPer = f.querySelector('[name="idPerfil"]')?.value || '';
+            const estado = f.querySelector('[name="estado"]')?.value || '';
+            const texto = f.querySelector('[name="texto"]')?.value || '';
+            const fIni = f.querySelector('[name="fechaInicio"]')?.value || '';
+            const fFin = f.querySelector('[name="fechaFin"]')?.value || '';
+            const idEq = f.querySelector('[name="idEquipo"]')?.value || '';
+            const idTec = f.querySelector('[name="idTecnico"]')?.value || '';
+
+            if (idDep) params.set('idDepartamento', idDep);
+            if (idPer) params.set('idPerfil', idPer);
+            if (estado) params.set('estado', estado);
+            if (texto) params.set('texto', texto);
+            if (fIni) params.set('fechaInicio', fIni);
+            if (fFin) params.set('fechaFin', fFin);
+            if (idEq) params.set('idEquipo', idEq);
+            if (idTec) params.set('idTecnico', idTec);
+
+            // URL relativa a esta página
+            return `${window.location.pathname}?${params.toString()}`;
+        }
+
+        function loadPreview() {
+            const url = buildPreviewUrl();
+            const frame = document.getElementById('previewFrame');
+            if (url) {
+                frame.src = url;
+            } else {
+                frame.removeAttribute('src');
+            }
+        }
+
+        function onSeccionChange() {
+            var s = document.getElementById('seccion').value;
+            document.getElementById('filtros-af').style.display = (s === 'ActivosFijos' || s === 'Asignaciones' || s === 'Usuarios' || s === 'Empleados' || s === 'Bitacora') ? 'block' : 'none';
+            document.getElementById('filtros-mant').style.display = (s === 'Mantenimientos') ? 'block' : 'none';
+        }
+
+        function toggleDownloadButtons() {
+            const hasSection = document.getElementById('seccion').value !== '';
+            document.getElementById('btnPdf').disabled = !hasSection;
+            document.getElementById('btnXlsx').disabled = !hasSection;
+            document.getElementById('btnDocx').disabled = !hasSection;
+        }
+
+        // Inicializar estado al cargar
+        onSeccionChange();
+        toggleDownloadButtons();
+
+        // Si ya viene sección preseleccionada, cargar previa
+        if (document.getElementById('seccion').value) {
+            loadPreview();
+        }
+    </script>
+}

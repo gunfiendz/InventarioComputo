@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using Microsoft.Data.SqlClient;
@@ -7,12 +8,15 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using Microsoft.Extensions.Logging; // <-- Necesario para el Logger
+using InventarioComputo.Data;      // <-- Necesario para la Bitácora
 
 namespace InventarioComputo.Pages.Inventario
 {
     public class FormMasivoModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
+        private readonly ILogger<FormMasivoModel> _logger; // Inyectar Logger
 
         [BindProperty]
         public BulkEquipoViewModel EquipoMasivo { get; set; } = new BulkEquipoViewModel();
@@ -21,22 +25,26 @@ namespace InventarioComputo.Pages.Inventario
         [BindProperty]
         public List<SoftwareCheckbox> SoftwareDisponible { get; set; } = new List<SoftwareCheckbox>();
 
-        public FormMasivoModel(ConexionBDD dbConnection)
+        public List<SelectListItem> TiposSoftware { get; set; } = new List<SelectListItem>();
+
+        public FormMasivoModel(ConexionBDD dbConnection, ILogger<FormMasivoModel> logger) // Constructor actualizado
         {
             _dbConnection = dbConnection;
+            _logger = logger; // Asignar Logger
         }
 
         public async Task OnGetAsync()
         {
             TiposEquipos = await ObtenerTiposEquipos();
             await CargarSoftwareDisponible();
+            await CargarTiposSoftware();
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
             if (!ModelState.IsValid)
             {
-                await OnGetAsync(); // Recargar datos de dropdowns y software
+                await OnGetAsync();
                 return Page();
             }
 
@@ -55,10 +63,7 @@ namespace InventarioComputo.Pages.Inventario
                                           VALUES (@IdPerfil, @NumeroSerie, @EtiquetaInv, @FechaCompra, @Garantia, @IdEstado)";
 
                             var cmdActivo = new SqlCommand(query, connection, transaction);
-
-                            // Creamos valores temporales para que sea fácil encontrarlos después
                             string placeholder = $"PENDIENTE-{Guid.NewGuid().ToString().Substring(0, 8)}";
-
                             cmdActivo.Parameters.AddWithValue("@IdPerfil", EquipoMasivo.IdPerfil);
                             cmdActivo.Parameters.AddWithValue("@NumeroSerie", placeholder);
                             cmdActivo.Parameters.AddWithValue("@EtiquetaInv", placeholder);
@@ -68,7 +73,6 @@ namespace InventarioComputo.Pages.Inventario
 
                             int nuevoActivoId = (int)await cmdActivo.ExecuteScalarAsync();
 
-                            // Asignar software
                             foreach (var software in SoftwareDisponible.Where(s => s.IsSelected))
                             {
                                 var cmdSoftware = new SqlCommand("INSERT INTO SoftwaresEquipos (id_activofijo, id_software, FechaInstalacion, ClaveLicencia) VALUES (@IdActivoFijo, @IdSoftware, GETDATE(), @ClaveLicencia)", connection, transaction);
@@ -80,13 +84,20 @@ namespace InventarioComputo.Pages.Inventario
                         }
 
                         await transaction.CommitAsync();
+
+                        // --- INTEGRACIÓN DE BITÁCORA ---
+                        string detalles = $"Creación masiva de {EquipoMasivo.Cantidad} equipos.";
+                        await BitacoraHelper.RegistrarAccionAsync(_dbConnection, _logger, User, BitacoraConstantes.Modulos.Inventario, BitacoraConstantes.Acciones.Creacion, detalles);
+                        // --- FIN DE LA INTEGRACIÓN ---
+
                         TempData["SuccessMessage"] = $"{EquipoMasivo.Cantidad} equipos han sido creados exitosamente con datos pendientes.";
                         return RedirectToPage("./Index");
                     }
                     catch (Exception ex)
                     {
                         await transaction.RollbackAsync();
-                        ModelState.AddModelError("", $"Error al guardar en masa: {ex.Message}");
+                        _logger.LogError(ex, "Error en creación masiva de activos. Usuario: {Username}", User.Identity.Name);
+                        ModelState.AddModelError("", $"Error del servidor al guardar en masa: {ex.Message}");
                         await OnGetAsync();
                         return Page();
                     }
@@ -94,8 +105,39 @@ namespace InventarioComputo.Pages.Inventario
             }
         }
 
-        // --- Los métodos de carga y AJAX no cambian ---
-        #region Helper Methods and AJAX Handlers
+        public async Task<JsonResult> OnPostAddSoftwareAsync([FromBody] AddSoftwareRequest data)
+        {
+            if (string.IsNullOrWhiteSpace(data.Nombre) || data.IdTipoSoftware == 0)
+                return new JsonResult(new { success = false, message = "Nombre y Tipo de Software son obligatorios." });
+
+            try
+            {
+                using (var connection = await _dbConnection.GetConnectionAsync())
+                {
+                    var query = "INSERT INTO Softwares (Nombre, id_tiposoftware, Version, Proveedor) OUTPUT INSERTED.id_software VALUES (@Nombre, @IdTipoSoftware, @Version, @Proveedor)";
+                    var command = new SqlCommand(query, connection);
+                    command.Parameters.AddWithValue("@Nombre", data.Nombre);
+                    command.Parameters.AddWithValue("@IdTipoSoftware", data.IdTipoSoftware);
+                    command.Parameters.AddWithValue("@Version", (object)data.Version ?? DBNull.Value);
+                    command.Parameters.AddWithValue("@Proveedor", (object)data.Proveedor ?? DBNull.Value);
+
+                    var newId = (int)await command.ExecuteScalarAsync();
+
+                    // --- INTEGRACIÓN DE BITÁCORA ---
+                    string detalles = $"Se agregó el nuevo software '{data.Nombre}' desde el formulario de creación masiva.";
+                    await BitacoraHelper.RegistrarAccionAsync(_dbConnection, _logger, User, BitacoraConstantes.Modulos.Softwares, BitacoraConstantes.Acciones.Creacion, detalles);
+                    // --- FIN DE LA INTEGRACIÓN ---
+
+                    return new JsonResult(new { success = true, id = newId, text = data.Nombre });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al agregar software desde modal en FormMasivo. Usuario: {Username}", User.Identity.Name);
+                return new JsonResult(new { success = false, message = "Error del servidor al guardar el software." });
+            }
+        }
+
         private async Task CargarSoftwareDisponible()
         {
             using (var connection = await _dbConnection.GetConnectionAsync())
@@ -106,6 +148,21 @@ namespace InventarioComputo.Pages.Inventario
                     while (await reader.ReadAsync())
                     {
                         SoftwareDisponible.Add(new SoftwareCheckbox { Id = reader.GetInt32(0), Nombre = reader.GetString(1) });
+                    }
+                }
+            }
+        }
+
+        private async Task CargarTiposSoftware()
+        {
+            using (var connection = await _dbConnection.GetConnectionAsync())
+            {
+                var cmdTipos = new SqlCommand("SELECT id_tiposoftware, TipoSoftware FROM TiposSoftwares ORDER BY TipoSoftware", connection);
+                using (var reader = await cmdTipos.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        TiposSoftware.Add(new SelectListItem { Value = reader.GetInt32(0).ToString(), Text = reader.GetString(1) });
                     }
                 }
             }
@@ -142,12 +199,7 @@ namespace InventarioComputo.Pages.Inventario
             var marcas = new List<Marca>();
             using (var connection = await _dbConnection.GetConnectionAsync())
             {
-                var query = @"
-                SELECT DISTINCT m.id_marca, m.Marca 
-                FROM Marcas m
-                JOIN Modelos mo ON m.id_marca = mo.id_marca
-                WHERE mo.id_tipoequipo = @TipoId
-                ORDER BY m.Marca";
+                var query = @"SELECT DISTINCT m.id_marca, m.Marca FROM Marcas m JOIN Modelos mo ON m.id_marca = mo.id_marca WHERE mo.id_tipoequipo = @TipoId ORDER BY m.Marca";
                 var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@TipoId", tipoId);
                 using (var reader = await command.ExecuteReaderAsync())
@@ -166,11 +218,7 @@ namespace InventarioComputo.Pages.Inventario
             var modelos = new List<ModeloInfo>();
             using (var connection = await _dbConnection.GetConnectionAsync())
             {
-                var query = @"
-                SELECT DISTINCT id_modelo, Modelo 
-                FROM Modelos
-                WHERE id_marca = @MarcaId AND id_tipoequipo = @TipoId
-                ORDER BY Modelo";
+                var query = @"SELECT DISTINCT id_modelo, Modelo FROM Modelos WHERE id_marca = @MarcaId AND id_tipoequipo = @TipoId ORDER BY Modelo";
                 var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@MarcaId", marcaId);
                 command.Parameters.AddWithValue("@TipoId", tipoId);
@@ -221,11 +269,7 @@ namespace InventarioComputo.Pages.Inventario
             var caracteristicas = new List<CaracteristicaViewModel>();
             using (var connection = await _dbConnection.GetConnectionAsync())
             {
-                var query = @"
-                SELECT c.Caracteristica, cm.Valor 
-                FROM CaracteristicasModelos cm
-                JOIN Caracteristicas c ON cm.id_caracteristica = c.id_caracteristica
-                WHERE cm.id_perfil = @PerfilId";
+                var query = @"SELECT c.Caracteristica, cm.Valor FROM CaracteristicasModelos cm JOIN Caracteristicas c ON cm.id_caracteristica = c.id_caracteristica WHERE cm.id_perfil = @PerfilId";
                 var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@PerfilId", perfilId);
                 using (var reader = await command.ExecuteReaderAsync())
@@ -244,12 +288,9 @@ namespace InventarioComputo.Pages.Inventario
             var perfiles = await ObtenerPerfilesPorModelo(modeloId);
             return new JsonResult(perfiles.Select(p => new { id = p.Id, nombre = p.Nombre }));
         }
-        #endregion
 
-        #region ViewModels
         public class BulkEquipoViewModel
         {
-            // Propiedades para seleccionar el perfil
             [Required(ErrorMessage = "Debe seleccionar un tipo de equipo")]
             public int IdTipoEquipo { get; set; }
             [Required(ErrorMessage = "Debe seleccionar una marca")]
@@ -258,28 +299,37 @@ namespace InventarioComputo.Pages.Inventario
             public int IdModelo { get; set; }
             [Required(ErrorMessage = "Debe seleccionar un perfil")]
             public int IdPerfil { get; set; }
-
-            // Propiedades comunes
             [Required(ErrorMessage = "La fecha de compra es requerida")]
             [Display(Name = "Fecha de Compra")]
             [DataType(DataType.Date)]
             public DateTime FechaCompra { get; set; } = DateTime.Today;
-
             [Display(Name = "Garantía (opcional)")]
             public string? Garantia { get; set; }
-
-            // Propiedad de Cantidad (reemplaza las listas)
             [Required(ErrorMessage = "Debe especificar la cantidad de equipos")]
             [Range(1, 100, ErrorMessage = "La cantidad debe estar entre 1 y 100")]
             public int Cantidad { get; set; }
         }
 
-        public class SoftwareCheckbox { public int Id { get; set; } public string Nombre { get; set; } public bool IsSelected { get; set; } public string? ClaveLicencia { get; set; } }
+        public class AddSoftwareRequest
+        {
+            public string Nombre { get; set; }
+            public int IdTipoSoftware { get; set; }
+            public string Version { get; set; }
+            public string Proveedor { get; set; }
+        }
+
+        public class SoftwareCheckbox
+        {
+            public int Id { get; set; }
+            public string Nombre { get; set; }
+            public bool IsSelected { get; set; }
+            public string? ClaveLicencia { get; set; }
+        }
+
         public class TipoEquipo { public int Id { get; set; } public string Nombre { get; set; } }
         public class Marca { public int Id { get; set; } public string Nombre { get; set; } }
         public class ModeloInfo { public int Id { get; set; } public string Nombre { get; set; } }
         public class PerfilInfo { public int Id { get; set; } public string Nombre { get; set; } }
         public class CaracteristicaViewModel { public string Nombre { get; set; } public string Valor { get; set; } }
-        #endregion
     }
 }

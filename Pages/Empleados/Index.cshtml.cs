@@ -5,12 +5,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
 using System.Linq;
+using Microsoft.Extensions.Logging;
+using InventarioComputo.Data;
 
 namespace InventarioComputo.Pages.Empleados
 {
     public class EmpleadosModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
+        private readonly ILogger<EmpleadosModel> _logger;
 
         public List<EmpleadoViewModel> Empleados { get; set; } = new List<EmpleadoViewModel>();
         public List<Departamento> Departamentos { get; set; } = new List<Departamento>();
@@ -24,9 +27,10 @@ namespace InventarioComputo.Pages.Empleados
         public string PuestoFilter { get; set; }
         public string BusquedaFilter { get; set; }
 
-        public EmpleadosModel(ConexionBDD dbConnection)
+        public EmpleadosModel(ConexionBDD dbConnection, ILogger<EmpleadosModel> logger)
         {
             _dbConnection = dbConnection;
+            _logger = logger;
         }
 
         public async Task OnGetAsync(
@@ -44,7 +48,6 @@ namespace InventarioComputo.Pages.Empleados
             PuestoFilter = puesto;
             BusquedaFilter = busqueda;
 
-            // Validar columnas
             var columnasValidas = new Dictionary<string, string>
             {
                 {"Nombre", "e.Nombre"},
@@ -69,13 +72,12 @@ namespace InventarioComputo.Pages.Empleados
             }
             catch (Exception ex)
             {
-                // Manejar error
+                _logger.LogError(ex, "Error al cargar Empleados.Index");
             }
         }
 
         private async Task CargarDatosFiltros(SqlConnection connection)
         {
-            // Departamentos
             var cmdDepartamentos = new SqlCommand("SELECT id_DE, NombreDepartamento FROM DepartamentosEmpresa", connection);
             using (var reader = await cmdDepartamentos.ExecuteReaderAsync())
             {
@@ -89,7 +91,6 @@ namespace InventarioComputo.Pages.Empleados
                 }
             }
 
-            // Puestos
             var cmdPuestos = new SqlCommand("SELECT id_puesto, NombrePuesto FROM Puestos", connection);
             using (var reader = await cmdPuestos.ExecuteReaderAsync())
             {
@@ -163,10 +164,6 @@ namespace InventarioComputo.Pages.Empleados
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 {
-                    // La lógica de eliminación debe considerar las dependencias.
-                    // Si el empleado tiene un usuario asociado, se debe manejar eso primero.
-                    // Aquí se asume que no hay dependencias de usuario o que la base de datos las maneja en cascada.
-
                     string deleteQuery = "DELETE FROM Empleados WHERE id_empleado = @Id";
                     using (var cmd = new SqlCommand(deleteQuery, connection))
                     {
@@ -174,12 +171,30 @@ namespace InventarioComputo.Pages.Empleados
                         await cmd.ExecuteNonQueryAsync();
                     }
                 }
+
+                try
+                {
+                    var detalles = $"Se eliminó el empleado Id={id}.";
+                    await BitacoraHelper.RegistrarAccionAsync(
+                        _dbConnection,
+                        _logger,
+                        User,
+                        BitacoraConstantes.Modulos.Empleados,
+                        BitacoraConstantes.Acciones.Eliminacion,
+                        detalles
+                    );
+                }
+                catch (Exception exBit)
+                {
+                    _logger.LogError(exBit, "Error al registrar Bitácora de eliminación de empleado Id={Id}", id);
+                }
+
                 TempData["Mensaje"] = "¡El empleado ha sido eliminado correctamente!";
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Error al eliminar el empleado: {ex.Message}";
-                Console.WriteLine($"Error al eliminar el empleado: {ex.Message}");
+                _logger.LogError(ex, "Error al eliminar el empleado Id={Id}", id);
             }
 
             return RedirectToPage();

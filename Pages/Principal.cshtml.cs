@@ -24,7 +24,7 @@ public class PrincipalModel : PageModel
     public int ActivosPorVencer { get; set; }
     public List<DepartamentoEstadistica> TopDepartamentos { get; set; } = new List<DepartamentoEstadistica>();
     public int EquiposAsignados { get; set; }
-    public int EquiposEnAlmacen { get; set; }
+    public int EquiposSinAsignar { get; set; }
     public int MantenimientosUltimoMes { get; set; }
 
 
@@ -103,10 +103,11 @@ public class PrincipalModel : PageModel
                     connection);
                 EquiposAsignados = (int)await cmdAsignados.ExecuteScalarAsync();
 
-                var cmdAlmacen = new SqlCommand(
-                    "SELECT COUNT(*) FROM ActivosFijos WHERE id_estado = (SELECT id_estado FROM Estados WHERE Estado = 'En Almacén')",
+                var cmdSinAsignar = new SqlCommand(
+                    "SELECT COUNT(*) FROM ActivosFijos",
                     connection);
-                EquiposEnAlmacen = (int)await cmdAlmacen.ExecuteScalarAsync();
+                int sinAsignar = (int)await cmdSinAsignar.ExecuteScalarAsync() - EquiposAsignados ;
+                EquiposSinAsignar = sinAsignar;
 
                 // 4. Mantenimientos en los últimos 30 días
                 var cmdMantenimientosMes = new SqlCommand(
@@ -127,7 +128,7 @@ public class PrincipalModel : PageModel
             // También para las nuevas estadísticas
             ActivosPorVencer = 0;
             EquiposAsignados = 0;
-            EquiposEnAlmacen = 0;
+            EquiposSinAsignar = 0;
             MantenimientosUltimoMes = 0;
         }
     }

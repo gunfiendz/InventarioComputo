@@ -1,0 +1,180 @@
+﻿:root {
+    --beige-light: #f5f5dc;
+    --beige-medium: #d2b48c;
+    --beige-dark: #8b7355;
+    --beige-text: #5a4a3a;
+    --beige-bg: #fff5e8;
+}
+
+body {
+    background-color: var(--beige-bg);
+    color: var(--beige-text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ============================================= */
+/* ========= ESTILOS PARA EL SIDEBAR ========= */
+/* ============================================= */
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 260px; /* Ancho del sidebar */
+    background-color: white;
+    border-right: 1px solid var(--beige-medium);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1rem;
+    transition: transform 0.3s ease-in-out;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+    .sidebar-header .header-logo {
+        height: 55px;
+    }
+
+.sidebar-nav {
+    flex-grow: 1; /* Empuja el footer hacia abajo */
+}
+
+    /* LA REGLA CLAVE PARA EL MENÚ VERTICAL */
+    .sidebar-nav .nav-list {
+        display: flex;
+        flex-direction: column; /* Apila los links verticalmente */
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        gap: 0.5rem;
+    }
+
+    .sidebar-nav .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        width: 100%;
+        color: var(--beige-text);
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+
+        .sidebar-nav .nav-link:hover {
+            background-color: var(--beige-light);
+            color: var(--beige-dark);
+        }
+
+        .sidebar-nav .nav-link.active {
+            background-color: var(--beige-medium);
+            color: white;
+        }
+
+        .sidebar-nav .nav-link i {
+            width: 25px; /* Alinea los iconos */
+            font-size: 1.1rem;
+            margin-right: 1rem;
+        }
+
+.sidebar-footer {
+    margin-top: auto; /* Asegura que se quede al fondo */
+    padding-top: 1rem;
+    border-top: 1px solid var(--beige-light);
+}
+
+    .sidebar-footer .username {
+        color: var(--beige-dark);
+        font-weight: 500;
+    }
+
+    .sidebar-footer .dropdown-toggle {
+        color: var(--beige-text);
+    }
+
+        .sidebar-footer .dropdown-toggle::after {
+            display: none;
+        }
+
+/* ============================================= */
+/* ========= ESTILOS PARA EL CONTENIDO ========= */
+/* ============================================= */
+
+.main-content {
+    flex-grow: 1;
+    margin-left: 260px; /* Mueve el contenido para dejar espacio al sidebar */
+    transition: margin-left 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.general-main {
+    flex: 1;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.general-footer {
+    background-color: white;
+    border-top: 1px solid var(--beige-medium);
+    padding: 1rem 0;
+    text-align: center;
+    color: var(--beige-dark);
+}
+
+    .general-footer .container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 2rem;
+    }
+
+/* ============================================= */
+/* ========= ESTILOS PARA MÓVILES ========= */
+/* ============================================= */
+
+.hamburger-btn {
+    display: none; /* Oculto en desktop */
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1010;
+    background-color: white;
+    border: 1px solid var(--beige-medium);
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+    color: var(--beige-dark);
+}
+
+@media (max-width: 992px) {
+    .sidebar {
+        transform: translateX(-100%); /* Oculta el sidebar fuera de la pantalla */
+    }
+
+        .sidebar.show {
+            transform: translateX(0); /* Muestra el sidebar */
+        }
+
+    .main-content {
+        margin-left: 0; /* El contenido ocupa todo el ancho */
+    }
+
+    .hamburger-btn {
+        display: block; /* Muestra el botón en móviles */
+    }
+}

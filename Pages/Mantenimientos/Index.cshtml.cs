@@ -5,12 +5,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
+using InventarioComputo.Data;
 
 namespace InventarioComputo.Pages.Mantenimientos
 {
     public class MantenimientosModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
+        private readonly ILogger<MantenimientosModel> _logger;
 
         public List<MantenimientoViewModel> Mantenimientos { get; set; } = new List<MantenimientoViewModel>();
         public List<TipoMantenimiento> TiposMantenimiento { get; set; } = new List<TipoMantenimiento>();
@@ -30,9 +33,10 @@ namespace InventarioComputo.Pages.Mantenimientos
         public string FechaFinFilter { get; set; }
         public string BusquedaFilter { get; set; }
 
-        public MantenimientosModel(ConexionBDD dbConnection)
+        public MantenimientosModel(ConexionBDD dbConnection, ILogger<MantenimientosModel> logger)
         {
             _dbConnection = dbConnection;
+            _logger = logger;
         }
 
         public async Task OnGetAsync(
@@ -87,7 +91,7 @@ namespace InventarioComputo.Pages.Mantenimientos
             }
             catch (Exception ex)
             {
-                // Manejar error
+                _logger.LogError(ex, "Error al cargar Mantenimientos.Index");
             }
         }
 
@@ -139,6 +143,15 @@ namespace InventarioComputo.Pages.Mantenimientos
 
         private async Task CargarMantenimientos(SqlConnection connection, string sortColumn)
         {
+
+            // sortColumn llega con algo tipo "me.Fecha", "m.Tipo", etc.
+            var orderBy = $"{sortColumn} {SortDirection}";
+            if (string.Equals(sortColumn, "me.Fecha", StringComparison.OrdinalIgnoreCase))
+            {
+                // Si empatan por fecha, el de mayor id_mantenimientoequipo primero
+                orderBy += ", me.id_mantenimientoequipo DESC";
+            }
+
             var query = $@"
                 SELECT 
                     me.id_mantenimientoequipo, 
@@ -153,12 +166,12 @@ namespace InventarioComputo.Pages.Mantenimientos
                 JOIN ActivosFijos af ON me.id_activofijo = af.id_activofijo
                 JOIN Empleados e ON me.id_empleado = e.id_empleado
                 WHERE (@Tipo IS NULL OR me.id_mantenimiento = @Tipo)
-                AND (@Equipo IS NULL OR me.id_activofijo = @Equipo)
-                AND (@Tecnico IS NULL OR me.id_empleado = @Tecnico)
-                AND (@FechaInicio IS NULL OR me.Fecha >= @FechaInicio)
-                AND (@FechaFin IS NULL OR me.Fecha <= @FechaFin)
-                AND (@Busqueda = '' OR me.Descripcion LIKE '%' + @Busqueda + '%')
-                ORDER BY {sortColumn} {SortDirection}
+                  AND (@Equipo IS NULL OR me.id_activofijo = @Equipo)
+                  AND (@Tecnico IS NULL OR me.id_empleado = @Tecnico)
+                  AND (@FechaInicio IS NULL OR me.Fecha >= @FechaInicio)
+                  AND (@FechaFin IS NULL OR me.Fecha <= @FechaFin)
+                  AND (@Busqueda = '' OR me.Descripcion LIKE '%' + @Busqueda + '%')
+                ORDER BY {orderBy}
                 OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
             var command = new SqlCommand(query, connection);
@@ -202,10 +215,31 @@ namespace InventarioComputo.Pages.Mantenimientos
 
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
+            string etiqueta = "";
+            string serie = "";
+
             try
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 {
+                    // Obtener EtiquetaInv y NumeroSerie del AF asociado al mantenimiento
+                    const string qInfo = @"
+                        SELECT af.EtiquetaInv, af.NumeroSerie
+                        FROM MantenimientosEquipos me
+                        JOIN ActivosFijos af ON me.id_activofijo = af.id_activofijo
+                        WHERE me.id_mantenimientoequipo = @Id";
+                    using (var cmdInfo = new SqlCommand(qInfo, connection))
+                    {
+                        cmdInfo.Parameters.AddWithValue("@Id", id);
+                        using var rd = await cmdInfo.ExecuteReaderAsync();
+                        if (await rd.ReadAsync())
+                        {
+                            etiqueta = rd.GetString(0);
+                            serie = rd.GetString(1);
+                        }
+                    }
+
+                    // Eliminar el mantenimiento
                     string deleteQuery = "DELETE FROM MantenimientosEquipos WHERE id_mantenimientoequipo = @Id";
                     using (var cmd = new SqlCommand(deleteQuery, connection))
                     {
@@ -213,12 +247,31 @@ namespace InventarioComputo.Pages.Mantenimientos
                         await cmd.ExecuteNonQueryAsync();
                     }
                 }
+
+                // Bitácora (Eliminar) con EtiquetaInv y S/N
+                try
+                {
+                    var detalles = $"Se eliminó el mantenimiento (ID: {id}) del equipo '{etiqueta}' (S/N: {serie}).";
+                    await BitacoraHelper.RegistrarAccionAsync(
+                        _dbConnection,
+                        _logger,
+                        User,
+                        BitacoraConstantes.Modulos.Mantenimientos,
+                        BitacoraConstantes.Acciones.Eliminacion,
+                        detalles
+                    );
+                }
+                catch (Exception exBit)
+                {
+                    _logger.LogError(exBit, "Error al registrar Bitácora de eliminación de mantenimiento Id={Id}", id);
+                }
+
                 TempData["Mensaje"] = "¡El mantenimiento ha sido eliminado correctamente!";
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Error al eliminar el mantenimiento: {ex.Message}";
-                Console.WriteLine($"Error al eliminar el mantenimiento: {ex.Message}");
+                _logger.LogError(ex, "Error al eliminar el mantenimiento Id={Id}", id);
             }
             return RedirectToPage();
         }

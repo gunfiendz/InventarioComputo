@@ -4,17 +4,15 @@
     ViewData["Title"] = Model.Modo == "Crear" ? "Nuevo Perfil" :
                         Model.Modo == "Editar" ? "Editar Perfil" : "Ver Perfil";
     Layout = "_LayoutGeneral";
-
     bool esModoLectura = Model.Modo == "Ver";
 }
 
 <div class="container-form">
-    <h1 class="beige-text"><i class="fas fa-laptop"></i> @ViewData["Title"]</h1>
+    <h1 class="beige-text"><i class="fas fa-list-alt"></i> @ViewData["Title"]</h1>
 
-    <form method="post" class="form-beige">
+    <form method="post" class="form-beige" asp-antiforgery="true">
         <input type="hidden" asp-for="Id" />
 
-        <!-- Datos básicos -->
         <div class="form-group">
             <label asp-for="NombrePerfil" class="form-label">Nombre del Perfil</label>
             <input asp-for="NombrePerfil" class="form-control" readonly="@esModoLectura" />
@@ -25,41 +23,49 @@
             <div class="col-md-4">
                 <div class="form-group">
                     <label asp-for="IdMarca" class="form-label">Marca</label>
-                    <select asp-for="IdMarca" class="form-control input-beige"
-                            id="selectMarca" disabled="@esModoLectura" asp-items="Model.Marcas">
-                        <option value="">-- Seleccione marca --</option>
-                    </select>
+                    <div class="input-group">
+                        <select asp-for="IdMarca" id="selectMarca" class="form-control input-beige" disabled="@esModoLectura" asp-items="Model.Marcas">
+                            <option value="">-- Seleccione marca --</option>
+                        </select>
+                        @if (!esModoLectura)
+                        {
+                            <button type="button" class="btn btn-outline-beige btn-add-item" data-bs-toggle="modal" data-bs-target="#addItemModal" data-type="marca" title="Agregar Nueva Marca">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        }
+                    </div>
                     <span asp-validation-for="IdMarca" class="text-danger"></span>
                 </div>
             </div>
-
             <div class="col-md-4">
                 <div class="form-group">
                     <label asp-for="IdTipoEquipo" class="form-label">Tipo de Equipo</label>
-                    <select asp-for="IdTipoEquipo" class="form-control input-beige"
-                            id="selectTipo" disabled="@esModoLectura" asp-items="Model.TiposEquipos">
-                        <option value="">-- Seleccione tipo --</option>
-                    </select>
+                    <div class="input-group">
+                        <select asp-for="IdTipoEquipo" id="selectTipo" class="form-control input-beige" disabled="@esModoLectura" asp-items="Model.TiposEquipos">
+                            <option value="">-- Seleccione tipo --</option>
+                        </select>
+                        @if (!esModoLectura)
+                        {
+                            <button type="button" class="btn btn-outline-beige btn-add-item" data-bs-toggle="modal" data-bs-target="#addItemModal" data-type="tipo" title="Agregar Nuevo Tipo">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        }
+                    </div>
                     <span asp-validation-for="IdTipoEquipo" class="text-danger"></span>
                 </div>
             </div>
-
             <div class="col-md-4">
                 <div class="form-group">
                     <label asp-for="IdModelo" class="form-label">Modelo</label>
                     <div class="input-group">
-                        <select asp-for="IdModelo" class="form-control input-beige"
-                                disabled="@esModoLectura" id="selectModelo">
-                            <option value="">-- Seleccione modelo --</option>
+                        <select asp-for="IdModelo" id="selectModelo" class="form-control input-beige" disabled="@esModoLectura">
+                            <option value="">-- Seleccione marca y tipo --</option>
                         </select>
                         @if (!esModoLectura)
                         {
-                            <div class="input-group-append">
-                                <button class="btn btn-outline-beige" type="button"
-                                        data-toggle="modal" data-target="#modalAgregarModelo">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
+                            <button type="button" class="btn btn-outline-beige btn-add-item" data-bs-toggle="modal" data-bs-target="#addItemModal" data-type="modelo" title="Agregar Nuevo Modelo">
+                                <i class="fas fa-plus"></i>
+                            </button>
                         }
                     </div>
                     <span asp-validation-for="IdModelo" class="text-danger"></span>
@@ -67,7 +73,6 @@
             </div>
         </div>
 
-        <!-- Características técnicas (dinámicas) -->
         <div class="form-group">
             <label class="form-label">Características Técnicas</label>
             <div id="caracteristicas-container">
@@ -75,35 +80,23 @@
                 {
                     <div class="caracteristica-item row mb-2">
                         <div class="col-md-5">
-                            <select asp-for="CaracteristicasSeleccionadas[i].IdCaracteristica"
-                                    class="form-control caracteristica-select"
-                                    data-index="@i"
-                                    disabled="@esModoLectura">
+                            <select asp-for="CaracteristicasSeleccionadas[i].IdCaracteristica" class="form-control caracteristica-select" data-index="@i" disabled="@esModoLectura">
                                 <option value="">-- Seleccione --</option>
                                 @foreach (var car in Model.TodasCaracteristicas)
                                 {
-                                    <option value="@car.Id"
-                                            selected="@(car.Id == Model.CaracteristicasSeleccionadas[i]?.IdCaracteristica)"
-                                            data-caracteristica-id="@car.Id">
+                                    <option value="@car.Id" selected="@(car.Id == Model.CaracteristicasSeleccionadas[i]?.IdCaracteristica)" data-caracteristica-id="@car.Id">
                                         @car.Nombre
                                     </option>
                                 }
                             </select>
-                            <span asp-validation-for="CaracteristicasSeleccionadas[i].IdCaracteristica" class="text-danger"></span>
                         </div>
                         <div class="col-md-5">
-                            <input asp-for="CaracteristicasSeleccionadas[i].Valor"
-                                   class="form-control"
-                                   placeholder="Valor"
-                                   readonly="@esModoLectura" />
-                            <span asp-validation-for="CaracteristicasSeleccionadas[i].Valor" class="text-danger"></span>
+                            <input asp-for="CaracteristicasSeleccionadas[i].Valor" class="form-control" placeholder="Valor" readonly="@esModoLectura" />
                         </div>
                         @if (!esModoLectura)
                         {
                             <div class="col-md-2">
-                                <button type="button" class="btn btn-danger btn-eliminar-caracteristica">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <button type="button" class="btn btn-danger btn-eliminar-caracteristica"><i class="fas fa-trash"></i></button>
                             </div>
                         }
                     </div>
@@ -132,45 +125,34 @@
     </form>
 </div>
 
-<!-- Modal para agregar nuevo modelo -->
-<div class="modal fade" id="modalAgregarModelo" tabindex="-1" role="dialog" aria-labelledby="modalAgregarModeloLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modalAgregarModeloLabel">Agregar Nuevo Modelo</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <h5 class="modal-title" id="addItemModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label for="nombreModelo">Nombre del Modelo</label>
-                    <input type="text" class="form-control" id="nombreModelo" placeholder="Ej: Latitude 5420">
+                <div id="modal-alert" class="alert alert-danger d-none"></div>
+
+                <div id="modal-tipo-fields" class="modal-fields d-none">
+                    <label for="newTipoNombre" class="form-label">Nombre del Nuevo Tipo de Equipo</label>
+                    <input type="text" id="newTipoNombre" class="form-control" />
                 </div>
-                <div class="form-group">
-                    <label for="marcaModelo">Marca</label>
-                    <select class="form-control" id="marcaModelo">
-                        <option value="">-- Seleccione marca --</option>
-                        @foreach (var marca in Model.Marcas)
-                        {
-                            <option value="@marca.Value">@marca.Text</option>
-                        }
-                    </select>
+                <div id="modal-marca-fields" class="modal-fields d-none">
+                    <label for="newMarcaNombre" class="form-label">Nombre de la Nueva Marca</label>
+                    <input type="text" id="newMarcaNombre" class="form-control" />
                 </div>
-                <div class="form-group">
-                    <label for="tipoModelo">Tipo de Equipo</label>
-                    <select class="form-control" id="tipoModelo">
-                        <option value="">-- Seleccione tipo --</option>
-                        @foreach (var tipo in Model.TiposEquipos)
-                        {
-                            <option value="@tipo.Value">@tipo.Text</option>
-                        }
-                    </select>
+                <div id="modal-modelo-fields" class="modal-fields d-none">
+                    <div class="form-group mb-2"><label for="newModeloNombre" class="form-label">Nombre del Nuevo Modelo</label><input type="text" id="newModeloNombre" class="form-control" /></div>
+                    <div class="form-group mb-2"><label for="modalModeloTipo" class="form-label">Tipo de Equipo</label><select id="modalModeloTipo" class="form-control" disabled></select></div>
+                    <div class="form-group"><label for="modalModeloMarca" class="form-label">Marca</label><select id="modalModeloMarca" class="form-control" disabled></select></div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-beige" id="btnGuardarModelo">Guardar</button>
+                <button type="button" class="btn btn-beige" id="btn-modal-save">Guardar</button>
+                <button type="button" class="btn btn-cancelar" data-bs-dismiss="modal">Cancelar</button>
+                
             </div>
         </div>
     </div>
@@ -179,8 +161,7 @@
 <template id="caracteristica-template">
     <div class="caracteristica-item row mb-2">
         <div class="col-md-5">
-            <select class="form-control caracteristica-select"
-                    name="CaracteristicasSeleccionadas[0].IdCaracteristica">
+            <select class="form-control caracteristica-select" name="CaracteristicasSeleccionadas[0].IdCaracteristica">
                 <option value="">-- Seleccione --</option>
                 @foreach (var car in Model.TodasCaracteristicas)
                 {
@@ -189,238 +170,158 @@
             </select>
         </div>
         <div class="col-md-5">
-            <input class="form-control"
-                   name="CaracteristicasSeleccionadas[0].Valor"
-                   placeholder="Valor" />
+            <input class="form-control" name="CaracteristicasSeleccionadas[0].Valor" placeholder="Valor" />
         </div>
         <div class="col-md-2">
-            <button type="button" class="btn btn-danger btn-eliminar-caracteristica">
-                <i class="fas fa-trash"></i>
-            </button>
+            <button type="button" class="btn btn-danger btn-eliminar-caracteristica"><i class="fas fa-trash"></i></button>
         </div>
     </div>
 </template>
-
-@section Styles {
-    <style>
-        .caracteristica-select option[hidden] {
-            display: none;
-        }
-
-        .caracteristica-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s;
-        }
-
-            .caracteristica-item:hover {
-                background-color: #f8f9fa;
-            }
-
-        .input-group-append .btn {
-            height: 38px;
-            border-color: #d2b48c;
-            color: #5a4a3a;
-        }
-    </style>
-}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Objeto para rastrear características seleccionadas
+            // Lógica para las características dinámicas (agregar/eliminar filas)
             const caracteristicasSeleccionadas = new Set();
-
-            // Función para cargar modelos basados en marca y tipo
-            async function cargarModelos() {
-                const marcaId = document.getElementById('selectMarca').value;
-                const tipoId = document.getElementById('selectTipo').value;
-                const selectModelo = document.getElementById('selectModelo');
-
-                if (!marcaId || !tipoId) {
-                    selectModelo.innerHTML = '<option value="">-- Seleccione marca y tipo --</option>';
-                    return;
-                }
-
-                try {
-                    selectModelo.innerHTML = '<option value="">Cargando modelos...</option>';
-
-                    const response = await fetch(`/EquiposRegistrados/EquiposForm?handler=ModelosPorMarcaYTipo&marcaId=${marcaId}&tipoId=${tipoId}`);
-                    if (!response.ok) throw new Error('Error en la respuesta');
-
-                    const modelos = await response.json();
-
-                    let options = '<option value="">-- Seleccione modelo --</option>';
-                    modelos.forEach(modelo => {
-                        options += `<option value="${modelo.value}"
-                                          ${modelo.value == '@Model.IdModelo' ? 'selected' : ''}>
-                                        ${modelo.text}
-                                    </option>`;
+            function actualizarCaracteristicasSeleccionadas() {
+                caracteristicasSeleccionadas.clear();
+                document.querySelectorAll('.caracteristica-select').forEach(select => {
+                    if (select.value) { caracteristicasSeleccionadas.add(parseInt(select.value)); }
+                });
+                document.querySelectorAll('.caracteristica-select').forEach(select => {
+                    const currentValue = select.value;
+                    Array.from(select.options).forEach(option => {
+                        if (option.value === "") return;
+                        const carId = parseInt(option.value);
+                        option.hidden = caracteristicasSeleccionadas.has(carId) && option.value !== currentValue;
                     });
-
-                    selectModelo.innerHTML = options;
-                } catch (error) {
-                    console.error('Error cargando modelos:', error);
-                    selectModelo.innerHTML = '<option value="">-- Error cargando modelos --</option>';
-                }
+                });
             }
-
-            // Eventos para cargar modelos cuando cambian marca o tipo
-            document.getElementById('selectMarca').addEventListener('change', cargarModelos);
-            document.getElementById('selectTipo').addEventListener('change', cargarModelos);
-
-            // Cargar modelos iniciales si hay valores
-            if ('@Model.IdMarca' && '@Model.IdTipoEquipo') {
-                cargarModelos();
-            }
-
-            // Manejar agregar nuevo modelo
-            document.getElementById('btnGuardarModelo').addEventListener('click', async function () {
-                const nombre = document.getElementById('nombreModelo').value;
-                const marcaId = document.getElementById('marcaModelo').value;
-                const tipoId = document.getElementById('tipoModelo').value;
-
-                if (!nombre || !marcaId || !tipoId) {
-                    alert('Por favor complete todos los campos');
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/EquiposRegistrados/EquiposForm?handler=AgregarModelo', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                        },
-                        body: JSON.stringify({
-                            NombreModelo: nombre,
-                            MarcaId: parseInt(marcaId),
-                            TipoId: parseInt(tipoId)
-                        })
+            function reindexarCaracteristicas() {
+                const items = document.querySelectorAll('#caracteristicas-container .caracteristica-item');
+                items.forEach((item, index) => {
+                    item.querySelectorAll('[name]').forEach(input => {
+                        input.name = input.name.replace(/\[\d+\]/, `[${index}]`);
                     });
-
-                    const resultado = await response.json();
-                    if (resultado.success) {
-                        // Agregar el nuevo modelo al dropdown
-                        const selectModelo = document.getElementById('selectModelo');
-                        const option = document.createElement('option');
-                        option.value = resultado.id;
-                        option.textContent = nombre;
-                        selectModelo.appendChild(option);
-                        selectModelo.value = resultado.id;
-
-                        // Cerrar el modal
-                        $('#modalAgregarModelo').modal('hide');
-
-                        // Limpiar el formulario
-                        document.getElementById('nombreModelo').value = '';
-                        document.getElementById('marcaModelo').selectedIndex = 0;
-                        document.getElementById('tipoModelo').selectedIndex = 0;
-                    } else {
-                        alert('Error al guardar: ' + resultado.error);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Error al guardar el modelo');
-                }
-            });
-
-            // Inicializar con las características existentes
-            actualizarCaracteristicasSeleccionadas();
-
-            // Agregar nueva fila de característica
+                });
+            }
             document.getElementById('btn-agregar-caracteristica')?.addEventListener('click', function () {
                 const container = document.getElementById('caracteristicas-container');
                 const template = document.getElementById('caracteristica-template');
                 const clone = template.content.cloneNode(true);
-                const newIndex = container.children.length;
-
-                // Actualizar nombres y atributos
-                clone.querySelectorAll('[name]').forEach(elem => {
-                    elem.name = elem.name.replace('[0]', `[${newIndex}]`);
-                });
-
-                // Asignar índice
-                const select = clone.querySelector('.caracteristica-select');
-                select.dataset.index = newIndex;
-
-                // Agregar evento de cambio
-                select.addEventListener('change', function () {
-                    actualizarCaracteristicasSeleccionadas();
-                });
-
-                // Agregar evento de eliminación
-                clone.querySelector('.btn-eliminar-caracteristica').addEventListener('click', function () {
-                    this.closest('.caracteristica-item').remove();
-                    actualizarCaracteristicasSeleccionadas();
-                    reindexarCaracteristicas();
-                });
-
                 container.appendChild(clone);
+                reindexarCaracteristicas();
                 actualizarCaracteristicasSeleccionadas();
             });
+            document.addEventListener('click', function (e) {
+                const eliminarBtn = e.target.closest('.btn-eliminar-caracteristica');
+                if (eliminarBtn) {
+                    eliminarBtn.closest('.caracteristica-item').remove();
+                    reindexarCaracteristicas();
+                    actualizarCaracteristicasSeleccionadas();
+                }
+            });
+            document.querySelectorAll('.caracteristica-select').forEach(select => {
+                select.addEventListener('change', actualizarCaracteristicasSeleccionadas);
+            });
+            actualizarCaracteristicasSeleccionadas();
 
-            // Función para reindexar características después de eliminar
-            function reindexarCaracteristicas() {
-                const container = document.getElementById('caracteristicas-container');
-                const items = container.querySelectorAll('.caracteristica-item');
+            // Lógica para modal y dropdowns dependientes
+            const marcaSelect = document.getElementById('selectMarca');
+            const tipoSelect = document.getElementById('selectTipo');
+            const modeloSelect = document.getElementById('selectModelo');
+            const addItemModal = document.getElementById('addItemModal');
+            let currentItemType = '';
 
-                items.forEach((item, index) => {
-                    item.querySelectorAll('[name]').forEach(input => {
-                        const name = input.name.replace(/CaracteristicasSeleccionadas\[\d+\]/,
-                            `CaracteristicasSeleccionadas[${index}]`);
-                        input.setAttribute('name', name);
-                    });
-
-                    const select = item.querySelector('.caracteristica-select');
-                    if (select) select.dataset.index = index;
-                });
+            async function cargarModelos() {
+                if (!marcaSelect.value || !tipoSelect.value) {
+                    modeloSelect.innerHTML = '<option value="">-- Seleccione marca y tipo --</option>'; return;
+                }
+                try {
+                    modeloSelect.innerHTML = '<option value="">Cargando...</option>';
+                    const response = await fetch(`/EquiposRegistrados/EquiposForm?handler=ModelosPorMarcaYTipo&marcaId=${marcaSelect.value}&tipoId=${tipoSelect.value}`);
+                    const modelos = await response.json();
+                    let options = '<option value="">-- Seleccione modelo --</option>';
+                    modelos.forEach(m => { options += `<option value="${m.value}" ${m.value == '@Model.IdModelo' ? 'selected' : ''}>${m.text}</option>`; });
+                    modeloSelect.innerHTML = options;
+                } catch (e) { modeloSelect.innerHTML = '<option value="">-- Error --</option>'; }
             }
 
-            // Eliminar característica
-            document.addEventListener('click', function (e) {
-                if (e.target.closest('.btn-eliminar-caracteristica')) {
-                    const item = e.target.closest('.caracteristica-item');
-                    item.remove();
-                    actualizarCaracteristicasSeleccionadas();
-                    reindexarCaracteristicas();
+            marcaSelect.addEventListener('change', cargarModelos);
+            tipoSelect.addEventListener('change', cargarModelos);
+            if ('@Model.IdMarca' && '@Model.IdTipoEquipo') { cargarModelos(); }
+
+            addItemModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                currentItemType = button.getAttribute('data-type');
+                const modalTitle = document.getElementById('addItemModalLabel');
+
+                document.querySelectorAll('.modal-fields').forEach(el => el.classList.add('d-none'));
+
+                if (currentItemType === 'tipo') {
+                    modalTitle.textContent = 'Agregar Nuevo Tipo de Equipo';
+                    document.getElementById('modal-tipo-fields').classList.remove('d-none');
+                } else if (currentItemType === 'marca') {
+                    modalTitle.textContent = 'Agregar Nueva Marca';
+                    document.getElementById('modal-marca-fields').classList.remove('d-none');
+                } else if (currentItemType === 'modelo') {
+                    modalTitle.textContent = 'Agregar Nuevo Modelo';
+                    document.getElementById('modal-modelo-fields').classList.remove('d-none');
+                    document.getElementById('modalModeloTipo').innerHTML = `<option value="${tipoSelect.value}">${tipoSelect.options[tipoSelect.selectedIndex].text}</option>`;
+                    document.getElementById('modalModeloMarca').innerHTML = `<option value="${marcaSelect.value}">${marcaSelect.options[marcaSelect.selectedIndex].text}</option>`;
                 }
             });
 
-            // Manejar cambios en características existentes
-            document.querySelectorAll('.caracteristica-select').forEach(select => {
-                select.addEventListener('change', function () {
-                    actualizarCaracteristicasSeleccionadas();
-                });
+            document.getElementById('btn-modal-save').addEventListener('click', async function () {
+                let url, body, targetSelect;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                switch (currentItemType) {
+                    case 'tipo':
+                        url = '/EquiposRegistrados/EquiposForm?handler=AddTipo';
+                        body = { Nombre: document.getElementById('newTipoNombre').value };
+                        targetSelect = tipoSelect;
+                        break;
+                    case 'marca':
+                        url = '/EquiposRegistrados/EquiposForm?handler=AddMarca';
+                        body = { Nombre: document.getElementById('newMarcaNombre').value };
+                        targetSelect = marcaSelect;
+                        break;
+                    case 'modelo':
+                        url = '/EquiposRegistrados/EquiposForm?handler=AgregarModelo';
+                        body = { NombreModelo: document.getElementById('newModeloNombre').value, MarcaId: marcaSelect.value, TipoId: tipoSelect.value };
+                        targetSelect = modeloSelect;
+                        break;
+                }
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                        body: JSON.stringify(body)
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const newOption = new Option(result.text || result.nombre, result.id, true, true);
+                        targetSelect.add(newOption);
+                        targetSelect.dispatchEvent(new Event('change'));
+                        bootstrap.Modal.getInstance(addItemModal).hide();
+                    } else {
+                        document.getElementById('modal-alert').textContent = result.message || 'Error al guardar.';
+                        document.getElementById('modal-alert').classList.remove('d-none');
+                    }
+                } catch (e) {
+                    document.getElementById('modal-alert').textContent = 'Error de conexión.';
+                    document.getElementById('modal-alert').classList.remove('d-none');
+                }
             });
 
-            function actualizarCaracteristicasSeleccionadas() {
-                caracteristicasSeleccionadas.clear();
-
-                document.querySelectorAll('.caracteristica-select').forEach(select => {
-                    if (select.value) {
-                        caracteristicasSeleccionadas.add(parseInt(select.value));
-                    }
-                });
-
-                // Actualizar opciones disponibles en todos los dropdowns
-                document.querySelectorAll('.caracteristica-select').forEach(select => {
-                    const currentValue = select.value;
-                    const currentIndex = select.dataset.index;
-
-                    Array.from(select.options).forEach(option => {
-                        if (option.value === "") return;
-
-                        const carId = parseInt(option.value);
-                        const estaSeleccionada = caracteristicasSeleccionadas.has(carId);
-
-                        // Ocultar opciones ya seleccionadas en otros dropdowns
-                        option.hidden = estaSeleccionada && option.value !== currentValue;
-                    });
-                });
-            }
+            addItemModal.addEventListener('hidden.bs.modal', function () {
+                document.querySelectorAll('.modal-fields input').forEach(input => input.value = '');
+                document.getElementById('modal-alert').classList.add('d-none');
+            });
         });
     </script>
 }

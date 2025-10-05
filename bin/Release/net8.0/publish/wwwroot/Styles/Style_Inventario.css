@@ -1,0 +1,214 @@
+﻿:root {
+    --beige-light: #f5f5dc;
+    --beige-medium: #d2b48c;
+    --beige-dark: #8b7355;
+    --beige-text: #5a4a3a;
+    --beige-bg: #fff8e1;
+}
+
+.inventario-container {
+    padding: 1rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.inventario-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--beige-medium);
+}
+
+    .inventario-header h1 {
+        color: var(--beige-text);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+.filtros-container {
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.filtros-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.filtro-item {
+    margin-bottom: 0.5rem;
+}
+
+.form-label {
+    color: var(--beige-text);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.input-beige {
+    border: 1px solid var(--beige-medium);
+    border-radius: 5px;
+    padding: 0.5rem;
+    width: 100%;
+    background-color: white;
+}
+
+    .input-beige:focus {
+        outline: none;
+        border-color: var(--beige-dark);
+        box-shadow: 0 0 0 2px rgba(210, 180, 140, 0.3);
+    }
+
+.table-beige {
+    border: 1px solid var(--beige-medium);
+}
+
+    .table-beige thead {
+        background-color: var(--beige-medium);
+        color: white;
+    }
+
+    .table-beige th {
+        padding: 0.75rem;
+        font-weight: 600;
+    }
+
+    .table-beige td {
+        padding: 0.75rem;
+        vertical-align: middle;
+        border-top: 1px solid var(--beige-light);
+    }
+
+    .table-beige tbody tr:hover {
+        background-color: var(--beige-light);
+    }
+
+.badge {
+    padding: 0.35rem 0.65rem;
+    border-radius: 50rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.estado-activo {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.estado-inactivo {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.estado-mantenimiento {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+.estado-activa {
+    background-color: #d1e7dd; 
+    color: #0f5132;
+}
+
+.estado-historica {
+    background-color: #e2e3e5;
+    color: #41464b;
+}
+
+.acciones {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-action {
+    color: var(--beige-text);
+    background: none;
+    border: none;
+    padding: 0.35rem;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+    .btn-action:hover {
+        background-color: var(--beige-medium);
+        color: white;
+    }
+
+.paginacion {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.page-link {
+    color: var(--beige-text);
+    border: 1px solid var(--beige-medium);
+}
+
+.page-item.active .page-link {
+    background-color: var(--beige-medium);
+    border-color: var(--beige-medium);
+}
+
+.page-link:hover {
+    color: var(--beige-dark);
+    background-color: var(--beige-light);
+}
+
+@media (max-width: 768px) {
+    .inventario-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .filtros-group {
+        grid-template-columns: 1fr;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .acciones {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .btn-action {
+        width: 25px;
+        height: 25px;
+        font-size: 0.8rem;
+    }
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-beige-secondary {
+    background-color: #f5f5dc; /* beige-light */
+    color: #5a4a3a; /* beige-text */
+    border: 1px solid #d2b48c; /* beige-medium */
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+    .btn-beige-secondary:hover {
+        background-color: #e9e2c4;
+        border-color: #b89a72;
+    }

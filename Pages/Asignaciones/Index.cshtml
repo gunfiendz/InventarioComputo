@@ -90,6 +90,14 @@
                             <a href="/Asignaciones/Asignar/Editar/@item.Id" class="btn btn-action">
                                 <i class="fas fa-pen"></i>
                             </a>
+                            <button type="button"
+                                  class="btn btn-action btn-eliminar"
+                                  data-id="@item.Id"
+                                  data-equipo="@item.Equipo"      
+                                  data-empleado="@item.Empleado"    
+                                  title="Eliminar">
+                            <i class="fas fa-trash-alt"></i>
+                          </button>
                         </td>
                     </tr>
                 }
@@ -98,22 +106,57 @@
     </div>
 
     <div class="paginacion">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                @for (int i = 1; i <= Model.TotalPaginas; i++)
+                {
+                    var url = $"?pagina={i}";
+                    <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
+                        <a class="page-link" href="@url">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-labelledby="confirmarEliminarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmarEliminarLabel"><i class="fas fa-trash-alt"></i> Confirmar eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Seguro que deseas eliminar la siguiente asignación?</p>
+                <div id="detalle-eliminar" class="text-muted small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="formEliminar" method="post" asp-page-handler="Delete" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="eliminar-id" />
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
+        // Sort por encabezado (conserva el patrón que ya usas: querystring sortColumn/sortDirection/paginaActual)
         document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.sort-link').forEach(link => {
-                link.addEventListener('click', function (e) {
-                    e.preventDefault();
-
-                    const column = this.dataset.sortColumn;
+            const ths = document.querySelectorAll('th.sortable[data-sort-column]');
+            ths.forEach(th => {
+                th.style.cursor = 'pointer';
+                th.addEventListener('click', () => {
+                    const column = th.getAttribute('data-sort-column');
                     const url = new URL(window.location.href);
-                    const currentOrder = url.searchParams.get('sortDirection') || 'DESC';
 
+                    const currentOrder = (url.searchParams.get('sortDirection') || 'ASC').toUpperCase();
                     let newOrder = 'ASC';
-                    if (url.searchParams.get('sortColumn') === column && currentOrder === 'ASC') {
+                    if ((url.searchParams.get('sortColumn') || '') === column && currentOrder === 'ASC') {
                         newOrder = 'DESC';
                     }
 
@@ -123,6 +166,26 @@
                     window.location.href = url.toString();
                 });
             });
+        });
+
+        // Eliminar: abre el modal y prepara el form con datos
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.btn-eliminar');
+            if (!btn) return;
+
+            const id = btn.dataset.id;
+            const equipo = btn.dataset.equipo || '';
+            const empleado = btn.dataset.empleado || '';
+
+            const detalle = [equipo, empleado].filter(Boolean).join(' | ');
+            const detalleDiv = document.getElementById('detalle-eliminar');
+            detalleDiv.textContent = detalle ? `Asignación: ${detalle}` : `Id: ${id}`;
+
+            document.getElementById('eliminar-id').value = id;
+
+            const modalEl = document.getElementById('confirmarEliminarModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
         });
     </script>
 }

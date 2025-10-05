@@ -9,7 +9,7 @@
     <h1 class="beige-text"><i class="fas fa-layer-group"></i> @ViewData["Title"]</h1>
     <p class="text-muted">Use este formulario para registrar múltiples activos del mismo perfil de una sola vez. Los números de serie y etiquetas se registrarán como 'PENDIENTE' para ser editados posteriormente desde el listado de inventario.</p>
 
-    <form method="post" class="form-beige">
+    <form method="post" class="form-beige" asp-antiforgery="true">
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
         <div class="row">
@@ -74,7 +74,6 @@
             </div>
 
             <div class="col-md-6">
-
                 <div class="card caracteristicas-card mb-3">
                     <div class="card-header">
                         <h6><i class="fas fa-cogs"></i> Características del Perfil</h6>
@@ -87,10 +86,13 @@
                 <h5>3. Seleccione Software (Opcional)</h5>
                 <hr />
                 <div class="card caracteristicas-card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h6><i class="fas fa-compact-disc"></i> Software Preinstalado</h6>
+                        <button type="button" class="btn btn-sm btn-outline-beige" data-bs-toggle="modal" data-bs-target="#addSoftwareModal" title="Agregar Nuevo Software">
+                            <i class="fas fa-plus"></i>
+                        </button>
                     </div>
-                    <div class="card-body software-list">
+                    <div class="card-body software-list" id="software-list-container">
                         @if (Model.SoftwareDisponible.Any())
                         {
                             @for (int i = 0; i < Model.SoftwareDisponible.Count; i++)
@@ -99,23 +101,17 @@
                                     <input type="hidden" asp-for="SoftwareDisponible[i].Id" />
                                     <input type="hidden" asp-for="SoftwareDisponible[i].Nombre" />
                                     <input class="form-check-input software-checkbox" type="checkbox" asp-for="SoftwareDisponible[i].IsSelected" />
-                                    <label class="form-check-label" asp-for="SoftwareDisponible[i].IsSelected">
-                                        @Model.SoftwareDisponible[i].Nombre
-                                    </label>
-                                    <input type="text" asp-for="SoftwareDisponible[i].ClaveLicencia"
-                                           class="form-control form-control-sm licencia-input"
-                                           placeholder="Clave de Licencia (opcional)"
-                                           style="display: none;" />
+                                    <label class="form-check-label" asp-for="SoftwareDisponible[i].IsSelected">@Model.SoftwareDisponible[i].Nombre</label>
+                                    <input type="text" asp-for="SoftwareDisponible[i].ClaveLicencia" class="form-control form-control-sm licencia-input" placeholder="Clave de Licencia (opcional)" style="display: none;" />
                                 </div>
                             }
                         }
                         else
                         {
-                            <p class="text-muted">No hay software disponible para agregar.</p>
+                            <p class="text-muted" id="no-software-msg">No hay software disponible para agregar.</p>
                         }
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -124,6 +120,28 @@
             <a href="/Inventario" class="btn btn-cancelar">Cancelar</a>
         </div>
     </form>
+</div>
+
+<div class="modal fade" id="addSoftwareModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Nuevo Software</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-software-alert" class="alert alert-danger d-none"></div>
+                <div class="form-group mb-2"><label for="newSoftwareNombre" class="form-label">Nombre</label><input type="text" id="newSoftwareNombre" class="form-control" /></div>
+                <div class="form-group mb-2"><label for="newSoftwareTipo" class="form-label">Tipo de Software</label><select id="newSoftwareTipo" class="form-select" asp-items="Model.TiposSoftware"><option value="">-- Seleccione --</option></select></div>
+                <div class="form-group mb-2"><label for="newSoftwareVersion" class="form-label">Versión (Opcional)</label><input type="text" id="newSoftwareVersion" class="form-control" /></div>
+                <div class="form-group"><label for="newSoftwareProveedor" class="form-label">Proveedor (Opcional)</label><input type="text" id="newSoftwareProveedor" class="form-control" /></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-cancelar" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-beige" id="btn-modal-save-software">Guardar</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Styles {
@@ -146,7 +164,6 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        // El script para los dropdowns en cascada y para mostrar/ocultar las licencias es idéntico al de la respuesta anterior
         document.addEventListener('DOMContentLoaded', function () {
             const tipoSelect = document.getElementById('tipoEquipo');
             const marcaSelect = document.getElementById('marca');
@@ -230,18 +247,62 @@
                 } catch (e) { container.innerHTML = '<p class="text-danger">Error al cargar características.</p>'; }
             }
 
+            function toggleLicenseInput(checkbox) {
+                const licenseInput = checkbox.closest('.software-item').querySelector('.licencia-input');
+                if (checkbox.checked) { licenseInput.style.display = 'block'; } else { licenseInput.style.display = 'none'; licenseInput.value = ''; }
+            }
+            document.querySelectorAll('.software-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', () => toggleLicenseInput(checkbox));
+            });
+
             setupEventListeners();
 
-            document.querySelectorAll('.software-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function () {
-                    const licenseInput = this.closest('.software-item').querySelector('.licencia-input');
-                    if (this.checked) {
-                        licenseInput.style.display = 'block';
-                    } else {
-                        licenseInput.style.display = 'none';
-                        licenseInput.value = '';
-                    }
-                });
+            const softwareModal = document.getElementById('addSoftwareModal');
+            const saveSoftwareBtn = document.getElementById('btn-modal-save-software');
+            const softwareAlert = document.getElementById('modal-software-alert');
+            const softwareListContainer = document.getElementById('software-list-container');
+
+            saveSoftwareBtn.addEventListener('click', async function () {
+                const body = {
+                    Nombre: document.getElementById('newSoftwareNombre').value,
+                    IdTipoSoftware: parseInt(document.getElementById('newSoftwareTipo').value),
+                    Version: document.getElementById('newSoftwareVersion').value,
+                    Proveedor: document.getElementById('newSoftwareProveedor').value
+                };
+
+                try {
+                    const response = await fetch('/Inventario/FormMasivo?handler=AddSoftware', { method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value }, body: JSON.stringify(body) });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const newIndex = softwareListContainer.querySelectorAll('.form-check').length;
+                        const noSoftwareMsg = document.getElementById('no-software-msg');
+                        if (noSoftwareMsg) noSoftwareMsg.remove();
+
+                        const newCheckHtml = `
+                                    <div class="form-check software-item">
+                                        <input type="hidden" name="SoftwareDisponible[${newIndex}].Id" value="${result.id}" />
+                                        <input type="hidden" name="SoftwareDisponible[${newIndex}].Nombre" value="${result.text}" />
+                                        <input class="form-check-input software-checkbox" type="checkbox" name="SoftwareDisponible[${newIndex}].IsSelected" id="SoftwareDisponible_${newIndex}__IsSelected" value="true" checked />
+                                        <label class="form-check-label" for="SoftwareDisponible_${newIndex}__IsSelected">${result.text}</label>
+                                        <input type="text" name="SoftwareDisponible[${newIndex}].ClaveLicencia" class="form-control form-control-sm licencia-input" placeholder="Clave de Licencia (opcional)" style="display: block;" />
+                                    </div>`;
+                        softwareListContainer.insertAdjacentHTML('beforeend', newCheckHtml);
+
+                        const newCheckbox = softwareListContainer.querySelector(`input[name="SoftwareDisponible[${newIndex}].IsSelected"]`);
+                        newCheckbox.addEventListener('change', () => toggleLicenseInput(newCheckbox));
+
+                        bootstrap.Modal.getInstance(softwareModal).hide();
+                    } else { softwareAlert.textContent = result.message || 'Error al guardar.'; softwareAlert.classList.remove('d-none'); }
+                } catch (e) { softwareAlert.textContent = 'Error de conexión.'; softwareAlert.classList.remove('d-none'); }
+            });
+
+            softwareModal.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('newSoftwareNombre').value = '';
+                document.getElementById('newSoftwareTipo').selectedIndex = 0;
+                document.getElementById('newSoftwareVersion').value = '';
+                document.getElementById('newSoftwareProveedor').value = '';
+                softwareAlert.classList.add('d-none');
             });
         });
     </script>

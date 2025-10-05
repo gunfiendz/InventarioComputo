@@ -75,7 +75,7 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label asp-for="Asignacion.FechaAsignacion"></label>
-                    <input asp-for="Asignacion.FechaAsignacion" type="date" class="form-control" readonly="@esModoLectura" />
+                    <input asp-for="Asignacion.FechaAsignacion" type="datetime-local" class="form-control" asp-format="{0:yyyy-MM-ddTHH:mm}" readonly="@esModoLectura" />
                     <span asp-validation-for="Asignacion.FechaAsignacion" class="text-danger"></span>
                 </div>
             </div>

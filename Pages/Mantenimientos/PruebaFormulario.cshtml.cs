@@ -5,12 +5,15 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using InventarioComputo.Data;
 
 namespace InventarioComputo.Pages.Mantenimientos
 {
     public class PruebaFormularioModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
+        private readonly ILogger<PruebaFormularioModel> _logger;
 
         [BindProperty]
         public MantenimientoViewModel Mantenimiento { get; set; } = new MantenimientoViewModel();
@@ -19,9 +22,10 @@ namespace InventarioComputo.Pages.Mantenimientos
         public List<EmpleadoInfo> Empleados { get; set; } = new List<EmpleadoInfo>();
         public string Modo { get; set; } = "Crear";
 
-        public PruebaFormularioModel(ConexionBDD dbConnection)
+        public PruebaFormularioModel(ConexionBDD dbConnection, ILogger<PruebaFormularioModel> logger)
         {
             _dbConnection = dbConnection;
+            _logger = logger;
         }
 
         public async Task<IActionResult> OnGetAsync(string handler, int? id)
@@ -35,7 +39,6 @@ namespace InventarioComputo.Pages.Mantenimientos
                     _ => "Crear"
                 };
 
-                // Cargar datos iniciales
                 await CargarDatosIniciales();
 
                 if (id.HasValue)
@@ -48,6 +51,7 @@ namespace InventarioComputo.Pages.Mantenimientos
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error interno al cargar el formulario de mantenimiento");
                 return StatusCode(500, "Error interno al cargar el formulario");
             }
         }
@@ -112,8 +116,6 @@ namespace InventarioComputo.Pages.Mantenimientos
                         p.NombrePerfil,
                         mo.Modelo,
                         m.Marca
-
-
                     FROM ActivosFijos af
                     JOIN Perfiles p ON af.id_perfil = p.id_perfil
                     JOIN Modelos mo ON p.id_modelo = mo.id_modelo
@@ -196,6 +198,8 @@ namespace InventarioComputo.Pages.Mantenimientos
                 return Page();
             }
 
+            var esCreacion = (Mantenimiento.IdMantenimientoEquipo == 0);
+
             try
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
@@ -252,11 +256,49 @@ namespace InventarioComputo.Pages.Mantenimientos
                     }
 
                     await command.ExecuteNonQueryAsync();
+
+                    // Etiqueta y S/N para la Bitácora
+                    string etiqueta = "", serie = "";
+                    const string qAf = "SELECT EtiquetaInv, NumeroSerie FROM ActivosFijos WHERE id_activofijo = @IdAF";
+                    using (var cmdAf = new SqlCommand(qAf, connection))
+                    {
+                        cmdAf.Parameters.AddWithValue("@IdAF", Mantenimiento.IdActivoFijo);
+                        using var rd = await cmdAf.ExecuteReaderAsync();
+                        if (await rd.ReadAsync())
+                        {
+                            etiqueta = rd.GetString(0);
+                            serie = rd.GetString(1);
+                        }
+                    }
+
+                    try
+                    {
+                        var detalles = esCreacion
+                            ? $"Se creó el mantenimiento del equipo '{etiqueta}' (S/N: {serie})."
+                            : $"Se modificó el mantenimiento del equipo '{etiqueta}' (S/N: {serie}).";
+
+                        await BitacoraHelper.RegistrarAccionAsync(
+                            _dbConnection,
+                            _logger,
+                            User,
+                            BitacoraConstantes.Modulos.Mantenimientos,
+                            esCreacion ? BitacoraConstantes.Acciones.Creacion : BitacoraConstantes.Acciones.Modificacion,
+                            detalles
+                        );
+                    }
+                    catch (Exception exBit)
+                    {
+                        _logger.LogError(exBit, "Error al registrar Bitácora de {Op} de mantenimiento (Equipo Etiqueta='{Etiqueta}', S/N='{Serie}')",
+                            esCreacion ? "creación" : "modificación", etiqueta, serie);
+                    }
+
                     return RedirectToPage("Index");
                 }
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error al guardar mantenimiento (IdMantenimientoEquipo={Id}, IdActivoFijo={AF})",
+                    Mantenimiento.IdMantenimientoEquipo, Mantenimiento.IdActivoFijo);
                 ModelState.AddModelError("", "Error al guardar: " + ex.Message);
                 await CargarDatosIniciales();
                 return Page();
@@ -302,7 +344,7 @@ namespace InventarioComputo.Pages.Mantenimientos
         {
             public int Id { get; set; }
             public string EtiquetaInv { get; set; }
-            public string NombrePerfil {  get; set; }
+            public string NombrePerfil { get; set; }
             public string Modelo { get; set; }
             public string Marca { get; set; }
         }

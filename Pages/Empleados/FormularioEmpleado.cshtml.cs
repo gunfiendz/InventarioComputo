@@ -1,26 +1,31 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
-using System.Data;
 using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using InventarioComputo.Data;
+using System;
 
 namespace InventarioComputo.Pages.Empleados
 {
     public class FormularioEmpleadoModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
+        private readonly ILogger<FormularioEmpleadoModel> _logger;
 
         [BindProperty]
         public EmpleadoViewModel Empleado { get; set; } = new EmpleadoViewModel();
+
         public List<PuestoInfo> Puestos { get; set; } = new List<PuestoInfo>();
         public List<DepartamentoInfo> Departamentos { get; set; } = new List<DepartamentoInfo>();
-        public string Modo { get; set; } = "Crear"; // "Crear", "Editar" o "Ver"
+        public string Modo { get; set; } = "Crear";
 
-        public FormularioEmpleadoModel(ConexionBDD dbConnection)
+        public FormularioEmpleadoModel(ConexionBDD dbConnection, ILogger<FormularioEmpleadoModel> logger)
         {
             _dbConnection = dbConnection;
+            _logger = logger;
         }
 
         public async Task<IActionResult> OnGetAsync(string handler, int? id)
@@ -34,7 +39,6 @@ namespace InventarioComputo.Pages.Empleados
                     _ => "Crear"
                 };
 
-                // Cargar datos iniciales
                 await CargarDatosIniciales();
 
                 if (id.HasValue)
@@ -47,6 +51,7 @@ namespace InventarioComputo.Pages.Empleados
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error interno al cargar el formulario de empleado");
                 return StatusCode(500, "Error interno al cargar el formulario");
             }
         }
@@ -149,15 +154,15 @@ namespace InventarioComputo.Pages.Empleados
                 return Page();
             }
 
+            var esCreacion = (Empleado.Id == 0);
+
             try
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 {
-                    string query;
-
-                    if (Empleado.Id == 0) // Crear nuevo
+                    if (Empleado.Id == 0)
                     {
-                        query = @"
+                        var insert = @"
                             INSERT INTO Empleados (
                                 Nombre, 
                                 id_puesto, 
@@ -170,11 +175,22 @@ namespace InventarioComputo.Pages.Empleados
                                 @IdDepartamento, 
                                 @Email, 
                                 @Telefono
-                            )";
+                            );
+                            SELECT SCOPE_IDENTITY();";
+
+                        var cmd = new SqlCommand(insert, connection);
+                        cmd.Parameters.AddWithValue("@Nombre", Empleado.Nombre);
+                        cmd.Parameters.AddWithValue("@IdPuesto", Empleado.IdPuesto);
+                        cmd.Parameters.AddWithValue("@IdDepartamento", Empleado.IdDepartamento);
+                        cmd.Parameters.AddWithValue("@Email", Empleado.Email ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@Telefono", Empleado.Telefono ?? (object)DBNull.Value);
+
+                        var newIdObj = await cmd.ExecuteScalarAsync();
+                        Empleado.Id = Convert.ToInt32(newIdObj);
                     }
-                    else // Actualizar existente
+                    else
                     {
-                        query = @"
+                        var update = @"
                             UPDATE Empleados SET
                                 Nombre = @Nombre,
                                 id_puesto = @IdPuesto,
@@ -182,27 +198,46 @@ namespace InventarioComputo.Pages.Empleados
                                 Email = @Email,
                                 Telefono = @Telefono
                             WHERE id_empleado = @Id";
+
+                        var cmd = new SqlCommand(update, connection);
+                        cmd.Parameters.AddWithValue("@Nombre", Empleado.Nombre);
+                        cmd.Parameters.AddWithValue("@IdPuesto", Empleado.IdPuesto);
+                        cmd.Parameters.AddWithValue("@IdDepartamento", Empleado.IdDepartamento);
+                        cmd.Parameters.AddWithValue("@Email", Empleado.Email ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@Telefono", Empleado.Telefono ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@Id", Empleado.Id);
+
+                        await cmd.ExecuteNonQueryAsync();
                     }
 
-                    var command = new SqlCommand(query, connection);
-                    command.Parameters.AddWithValue("@Nombre", Empleado.Nombre);
-                    command.Parameters.AddWithValue("@IdPuesto", Empleado.IdPuesto);
-                    command.Parameters.AddWithValue("@IdDepartamento", Empleado.IdDepartamento);
-                    command.Parameters.AddWithValue("@Email", Empleado.Email ?? (object)DBNull.Value);
-                    command.Parameters.AddWithValue("@Telefono", Empleado.Telefono ?? (object)DBNull.Value);
-
-                    if (Empleado.Id > 0)
+                    try
                     {
-                        command.Parameters.AddWithValue("@Id", Empleado.Id);
+                        var detalles = esCreacion
+                            ? $"Se creó el empleado '{Empleado.Nombre}' (ID: {Empleado.Id})."
+                            : $"Se modificó el empleado '{Empleado.Nombre}' (ID: {Empleado.Id}).";
+
+                        await BitacoraHelper.RegistrarAccionAsync(
+                            _dbConnection,
+                            _logger,
+                            User,
+                            BitacoraConstantes.Modulos.Empleados,
+                            esCreacion ? BitacoraConstantes.Acciones.Creacion : BitacoraConstantes.Acciones.Modificacion,
+                            detalles
+                        );
+                    }
+                    catch (Exception exBit)
+                    {
+                        _logger.LogError(exBit, "Error al registrar Bitácora de {Op} de empleado Id={Id}",
+                            esCreacion ? "creación" : "modificación", Empleado.Id);
                     }
 
-                    await command.ExecuteNonQueryAsync();
                     return RedirectToPage("./Index");
                 }
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", "Error al guardar: " + ex.Message);
+                _logger.LogError(ex, "Error al guardar empleado Id={Id}", Empleado.Id);
+                ModelState.AddModelError(string.Empty, "Error al guardar: " + ex.Message);
                 await CargarDatosIniciales();
                 return Page();
             }

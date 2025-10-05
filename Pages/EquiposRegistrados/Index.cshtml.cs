@@ -6,12 +6,15 @@ using System.Threading.Tasks;
 using System;
 using System.Linq;
 using System.Data;
+using Microsoft.Extensions.Logging;
+using InventarioComputo.Data;
 
 namespace InventarioComputo.Pages.EquiposRegistrados
 {
     public class EquiposRegistradosModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
+        private readonly ILogger<EquiposRegistradosModel> _logger; 
 
         public List<ModeloViewModel> Modelos { get; set; } = new List<ModeloViewModel>();
         public List<TipoEquipo> TiposEquipo { get; set; } = new List<TipoEquipo>();
@@ -25,9 +28,10 @@ namespace InventarioComputo.Pages.EquiposRegistrados
         public string MarcaFilter { get; set; }
         public string BusquedaFilter { get; set; }
 
-        public EquiposRegistradosModel(ConexionBDD dbConnection)
+        public EquiposRegistradosModel(ConexionBDD dbConnection, ILogger<EquiposRegistradosModel> logger)
         {
             _dbConnection = dbConnection;
+            _logger = logger;
         }
 
         public async Task OnGetAsync(
@@ -71,7 +75,8 @@ namespace InventarioComputo.Pages.EquiposRegistrados
             }
             catch (Exception ex)
             {
-                // Manejar error
+                _logger.LogError(ex, "Error al cargar los datos");
+                TempData["ErrorMessage"] = "Ocurrió un error al cargar los datos";
             }
         }
 
@@ -174,46 +179,69 @@ namespace InventarioComputo.Pages.EquiposRegistrados
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 {
-                    using (var transaction = connection.BeginTransaction())
+                    // 1) Obtener nombre del perfil (para un detalle útil en Bitácora y logs)
+                    string nombrePerfil = "(sin nombre)";
+                    using (var cmdInfo = new SqlCommand(
+                        "SELECT NombrePerfil FROM Perfiles WHERE id_perfil = @Id",
+                        connection))
                     {
-                        try
-                        {
-                            // Primero, eliminar las características asociadas a este perfil
-                            string deleteCaracteristicasQuery = "DELETE FROM CaracteristicasModelos WHERE id_perfil = @Id";
-                            using (var cmd = new SqlCommand(deleteCaracteristicasQuery, connection, transaction))
-                            {
-                                cmd.Parameters.AddWithValue("@Id", id);
-                                await cmd.ExecuteNonQueryAsync();
-                            }
-
-                            // Luego, eliminar el perfil
-                            string deletePerfilQuery = "DELETE FROM Perfiles WHERE id_perfil = @Id";
-                            using (var cmd = new SqlCommand(deletePerfilQuery, connection, transaction))
-                            {
-                                cmd.Parameters.AddWithValue("@Id", id);
-                                await cmd.ExecuteNonQueryAsync();
-                            }
-
-                            await transaction.CommitAsync();
-                            TempData["Mensaje"] = "¡El perfil de equipo ha sido eliminado correctamente!";
-                        }
-                        catch (Exception ex)
-                        {
-                            await transaction.RollbackAsync();
-                            TempData["Error"] = $"Error al eliminar el perfil de equipo: {ex.Message}";
-                            Console.WriteLine($"Error en transacción al eliminar el perfil: {ex.Message}");
-                        }
+                        cmdInfo.Parameters.AddWithValue("@Id", id);
+                        var res = await cmdInfo.ExecuteScalarAsync();
+                        if (res != null) nombrePerfil = res.ToString();
                     }
+
+                    // 2) Borrar dependencias del perfil (si aplica)
+                    using (var cmdCaract = new SqlCommand(
+                        "DELETE FROM CaracteristicasModelos WHERE id_perfil = @Id",
+                        connection))
+                    {
+                        cmdCaract.Parameters.AddWithValue("@Id", id);
+                        await cmdCaract.ExecuteNonQueryAsync();
+                    }
+
+                    // 3) Borrar el perfil
+                    using (var cmdPerfil = new SqlCommand(
+                        "DELETE FROM Perfiles WHERE id_perfil = @Id",
+                        connection))
+                    {
+                        cmdPerfil.Parameters.AddWithValue("@Id", id);
+                        await cmdPerfil.ExecuteNonQueryAsync();
+                    }
+
+                    var detalles = $"Se eliminó el perfil '{nombrePerfil}' (ID: {id}).";
+                    try
+                    {
+                        await BitacoraHelper.RegistrarAccionAsync(
+                            _dbConnection,
+                            _logger,
+                            User,
+                            BitacoraConstantes.Modulos.PerfilesEquipos,
+                            BitacoraConstantes.Acciones.Eliminacion,
+                            detalles
+                        );
+                    }
+                    catch (Exception exBit)
+                    {
+                        _logger.LogWarning(exBit, "No se pudo registrar la Bitácora al eliminar perfil Id {PerfilId}. Usuario {Username}",
+                            id, User?.Identity?.Name ?? "anon");
+                    }
+
+                    _logger.LogInformation("Perfil eliminado. Id {PerfilId}, Nombre '{NombrePerfil}', Usuario {Username}",
+                        id, nombrePerfil, User?.Identity?.Name ?? "anon");
+
+                    TempData["Mensaje"] = "¡El perfil se eliminó correctamente!";
                 }
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Error al eliminar el perfil de equipo: {ex.Message}";
-                Console.WriteLine($"Error general al eliminar el perfil: {ex.Message}");
+                TempData["Error"] = "Error al eliminar el perfil.";
+                _logger.LogError(ex, "Error eliminando perfil Id {PerfilId}. Usuario {Username}",
+                    id, User?.Identity?.Name ?? "anon");
             }
 
             return RedirectToPage();
         }
+
 
         public class ModeloViewModel
         {

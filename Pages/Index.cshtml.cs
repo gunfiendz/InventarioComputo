@@ -64,7 +64,6 @@ public class IndexModel : PageModel
                             new Claim(ClaimTypes.Name, Username),
                             new Claim(ClaimTypes.NameIdentifier, reader["id_usuario"].ToString()),
                             new Claim(ClaimTypes.Role, reader["NombreRol"].ToString()),
-                            // --- LÍNEA CORREGIDA ---
                             new Claim("id_usuario", reader["id_usuario"].ToString())
                         };
 
@@ -76,6 +75,11 @@ public class IndexModel : PageModel
                             new ClaimsPrincipal(claimsIdentity));
 
                         _logger.LogInformation("Autenticación exitosa");
+                        // Se crea un ClaimsPrincipal temporal para pasarlo al helper, ya que 'User' aún no está actualizado.
+                        var userPrincipal = new ClaimsPrincipal(claimsIdentity);
+                        string detalles = $"El usuario '{Username}' ha iniciado sesión exitosamente.";
+                        await InventarioComputo.Data.BitacoraHelper.RegistrarAccionAsync(_dbConnection, _logger, userPrincipal, InventarioComputo.Data.BitacoraConstantes.Modulos.Autenticacion, InventarioComputo.Data.BitacoraConstantes.Acciones.Login, detalles);
+                        // --- FIN DE LA INTEGRACIÓN ---
                         return RedirectToPage("/Principal");
                     }
                 }

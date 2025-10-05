@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using InventarioComputo.Data;
 
 namespace InventarioComputo.Pages.Usuarios
 {
@@ -214,7 +215,34 @@ namespace InventarioComputo.Pages.Usuarios
 
                     await command.ExecuteNonQueryAsync();
 
+                    // Obtener Username para Bitácora
+                    string username = "";
+                    using (var cmdUser = new SqlCommand("SELECT Username FROM Usuarios WHERE id_usuario = @Id", connection))
+                    {
+                        cmdUser.Parameters.AddWithValue("@Id", id);
+                        var res = await cmdUser.ExecuteScalarAsync();
+                        if (res != null) username = res.ToString();
+                    }
+
+                    try
+                    {
+                        var detalles = $"Se restableció la contraseña del usuario '{username}' (ID: {id}).";
+                        await BitacoraHelper.RegistrarAccionAsync(
+                            _dbConnection,
+                            _logger,
+                            User,
+                            BitacoraConstantes.Modulos.Usuarios,
+                            BitacoraConstantes.Acciones.ReseteoPassword,
+                            detalles
+                        );
+                    }
+                    catch (Exception exBit)
+                    {
+                        _logger.LogError(exBit, "Error al registrar Bitácora de reseteo de contraseña del usuario Id={Id}", id);
+                    }
+
                     TempData["Mensaje"] = "¡Contraseña restablecida con éxito!";
+
                     return RedirectToPage(new { handler = "Editar", id });
                 }
             }
@@ -252,6 +280,8 @@ namespace InventarioComputo.Pages.Usuarios
                 return Page();
             }
 
+            var esCreacion = (Usuario.Id == 0);
+
             try
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
@@ -273,7 +303,8 @@ namespace InventarioComputo.Pages.Usuarios
                                 GETDATE(), 
                                 @IdEmpleado,
                                 @IdRolSistema
-                            )";
+                            );
+                            SELECT SCOPE_IDENTITY();";
                     }
                     else // Actualizar existente
                     {
@@ -309,7 +340,38 @@ namespace InventarioComputo.Pages.Usuarios
                         command.Parameters.AddWithValue("@Id", Usuario.Id);
                     }
 
-                    await command.ExecuteNonQueryAsync();
+                    if (esCreacion)
+                    {
+                        var newIdObj = await command.ExecuteScalarAsync();
+                        Usuario.Id = Convert.ToInt32(newIdObj);
+                    }
+                    else
+                    {
+                        await command.ExecuteNonQueryAsync();
+                    }
+
+                    // Bitácora crear/modificar
+                    try
+                    {
+                        var detalles = esCreacion
+                            ? $"Se creó el usuario '{Usuario.Username}' (ID: {Usuario.Id})."
+                            : $"Se modificó el usuario '{Usuario.Username}' (ID: {Usuario.Id}).";
+
+                        await BitacoraHelper.RegistrarAccionAsync(
+                            _dbConnection,
+                            _logger,
+                            User,
+                            BitacoraConstantes.Modulos.Usuarios,
+                            esCreacion ? BitacoraConstantes.Acciones.Creacion : BitacoraConstantes.Acciones.Modificacion,
+                            detalles
+                        );
+                    }
+                    catch (Exception exBit)
+                    {
+                        _logger.LogError(exBit, "Error al registrar Bitácora de {Op} de usuario Id={Id}",
+                            esCreacion ? "creación" : "modificación", Usuario.Id);
+                    }
+
                     return RedirectToPage("./Index");
                 }
             }

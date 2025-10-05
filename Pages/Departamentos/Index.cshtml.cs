@@ -5,14 +5,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
 using System.Linq;
-using System.Security.Claims;
-using System.Data;
+using Microsoft.Extensions.Logging;
+using InventarioComputo.Data;
+using System.Text;
 
 namespace InventarioComputo.Pages.Departamentos
 {
     public class DepartamentosModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
+        private readonly ILogger<DepartamentosModel> _logger;
 
         public List<DepartamentoViewModel> Departamentos { get; set; } = new List<DepartamentoViewModel>();
         public List<Area> Areas { get; set; } = new List<Area>();
@@ -23,51 +25,81 @@ namespace InventarioComputo.Pages.Departamentos
         public string RolUsuario { get; set; }
         public string SortColumn { get; set; } = "NombreDepartamento";
         public string SortDirection { get; set; } = "ASC";
+
+        [BindProperty(SupportsGet = true)]
         public string BusquedaFilter { get; set; }
 
-        public DepartamentosModel(ConexionBDD dbConnection)
+        public DepartamentosModel(ConexionBDD dbConnection, ILogger<DepartamentosModel> logger)
         {
             _dbConnection = dbConnection;
+            _logger = logger;
         }
 
-        public async Task OnGetAsync(
-            int pagina = 1,
-            string sortColumn = "NombreDepartamento",
-            string sortDirection = "ASC",
-            string busqueda = "")
+        public async Task OnGetAsync()
         {
-            PaginaActual = pagina;
-            SortColumn = sortColumn;
-            SortDirection = sortDirection;
-            BusquedaFilter = busqueda;
-
-            var columnasValidas = new Dictionary<string, string>
+            // Mapea columnas permitidas para ORDER BY (idéntico patrón a tus otros index)
+            var sortColumns = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                {"NombreDepartamento", "de.NombreDepartamento"},
-                {"Descripcion", "de.Descripcion"}
+                { "NombreDepartamento", "de.NombreDepartamento" },
+                { "Descripcion",        "de.Descripcion" }
             };
+            var sortColExpr = sortColumns.ContainsKey(SortColumn) ? sortColumns[SortColumn] : "de.NombreDepartamento";
+            var sortDir = (SortDirection?.ToUpper() == "DESC") ? "DESC" : "ASC";
 
-            if (!columnasValidas.ContainsKey(SortColumn))
+            var queryBuilder = new StringBuilder(@"
+                SELECT 
+                    de.id_DE,
+                    de.NombreDepartamento,
+                    de.Descripcion,
+                    COUNT(*) OVER() AS TotalRegistros
+                FROM DepartamentosEmpresa de
+                WHERE 1=1");
+
+            var parameters = new List<SqlParameter>();
+
+            if (!string.IsNullOrWhiteSpace(BusquedaFilter))
             {
-                SortColumn = "NombreDepartamento";
+                queryBuilder.Append(" AND (de.NombreDepartamento LIKE @Busqueda OR de.Descripcion LIKE @Busqueda)");
+                parameters.Add(new SqlParameter("@Busqueda", $"%{BusquedaFilter.Trim()}%"));
             }
 
-            SortDirection = SortDirection.ToUpper() == "DESC" ? "DESC" : "ASC";
+            queryBuilder.Append($" ORDER BY {sortColExpr} {sortDir}, de.id_DE DESC");
+            queryBuilder.Append(" OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY");
 
-            NombreUsuario = User.Identity.Name;
-            RolUsuario = User.FindFirst(ClaimTypes.Role)?.Value;
+            parameters.Add(new SqlParameter("@Offset", (PaginaActual - 1) * RegistrosPorPagina));
+            parameters.Add(new SqlParameter("@PageSize", RegistrosPorPagina));
 
             try
             {
-                using (var connection = await _dbConnection.GetConnectionAsync())
+                using var connection = await _dbConnection.GetConnectionAsync();
+                using var command = new SqlCommand(queryBuilder.ToString(), connection);
+                command.Parameters.AddRange(parameters.ToArray());
+
+                using var reader = await command.ExecuteReaderAsync();
+                int totalRegistros = 0;
+
+                while (await reader.ReadAsync())
                 {
-                    await CargarAreas(connection);
-                    await CargarDepartamentos(connection, columnasValidas[SortColumn]);
+                    Departamentos.Add(new DepartamentoViewModel
+                    {
+                        Id = reader.GetInt32(0),
+                        Nombre = reader.GetString(1),
+                        Descripcion = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        // AreasAsociadas queda vacía si no la llenas en otro query (la vista compila igual)
+                    });
+
+                    if (totalRegistros == 0)
+                        totalRegistros = reader.GetInt32(3);
                 }
+
+                if (totalRegistros > 0)
+                    TotalPaginas = (int)Math.Ceiling(totalRegistros / (double)RegistrosPorPagina);
             }
             catch (Exception ex)
             {
-                // Manejar error
+                // Solo error en catch, como pediste
+                _logger.LogError(ex, "Error al cargar Departamentos.Index");
+                // la vista puede renderizar con lista vacía
             }
         }
 
@@ -158,7 +190,7 @@ namespace InventarioComputo.Pages.Departamentos
                     {
                         try
                         {
-                            // Verificar si hay empleados asignados a este departamento
+                            // Validar empleados asociados
                             string checkEmpleadosQuery = "SELECT COUNT(*) FROM Empleados WHERE id_DE = @Id";
                             using (var cmd = new SqlCommand(checkEmpleadosQuery, connection, transaction))
                             {
@@ -166,11 +198,12 @@ namespace InventarioComputo.Pages.Departamentos
                                 int empleadosCount = (int)await cmd.ExecuteScalarAsync();
                                 if (empleadosCount > 0)
                                 {
-                                    throw new InvalidOperationException($"No se puede eliminar el departamento porque tiene {empleadosCount} empleado(s) asociado(s).");
+                                    TempData["Error"] = $"No se puede eliminar el departamento porque tiene {empleadosCount} empleado(s) asociado(s).";
+                                    await transaction.RollbackAsync();
+                                    return RedirectToPage();
                                 }
                             }
 
-                            // 1. Eliminar las áreas asociadas en DepartamentosAreas
                             string deleteAreasQuery = "DELETE FROM DepartamentosAreas WHERE id_DE = @Id";
                             using (var cmd = new SqlCommand(deleteAreasQuery, connection, transaction))
                             {
@@ -178,7 +211,6 @@ namespace InventarioComputo.Pages.Departamentos
                                 await cmd.ExecuteNonQueryAsync();
                             }
 
-                            // 2. Eliminar el registro del departamento en DepartamentosEmpresa
                             string deleteDepartamentoQuery = "DELETE FROM DepartamentosEmpresa WHERE id_DE = @Id";
                             using (var cmd = new SqlCommand(deleteDepartamentoQuery, connection, transaction))
                             {
@@ -187,17 +219,31 @@ namespace InventarioComputo.Pages.Departamentos
                             }
 
                             await transaction.CommitAsync();
-                            TempData["Mensaje"] = "¡El departamento ha sido eliminado correctamente!";
-                        }
-                        catch (InvalidOperationException ex)
-                        {
-                            await transaction.RollbackAsync();
-                            TempData["Error"] = ex.Message;
+
+                            try
+                            {
+                                var detalles = $"Se eliminó el departamento Id={id}.";
+                                await BitacoraHelper.RegistrarAccionAsync(
+                                    _dbConnection,
+                                    _logger,
+                                    User,
+                                    BitacoraConstantes.Modulos.Departamentos,
+                                    BitacoraConstantes.Acciones.Eliminacion,
+                                    detalles
+                                );
+                            }
+                            catch (Exception exBit)
+                            {
+                                _logger.LogError(exBit, "Error al registrar Bitácora de eliminación de departamento Id={Id}", id);
+                            }
+
+                            TempData["Success"] = "Departamento eliminado correctamente.";
                         }
                         catch (Exception ex)
                         {
                             await transaction.RollbackAsync();
                             TempData["Error"] = $"Error en la transacción al eliminar: {ex.Message}";
+                            _logger.LogError(ex, "Error en la transacción al eliminar departamento Id={Id}", id);
                         }
                     }
                 }
@@ -205,6 +251,7 @@ namespace InventarioComputo.Pages.Departamentos
             catch (Exception ex)
             {
                 TempData["Error"] = $"Error general al eliminar el departamento: {ex.Message}";
+                _logger.LogError(ex, "Error general al eliminar el departamento Id={Id}", id);
             }
 
             return RedirectToPage();

@@ -1,10 +1,8 @@
 ﻿@page "{handler?}/{id:int?}"
 @model InventarioComputo.Pages.Departamentos.DepaFormModel
 @{
-    ViewData["Title"] = Model.Modo == "Crear" ?
-        "Nuevo Departamento" :
-                        Model.Modo == "Editar" ?
-        "Editar Departamento" : "Ver Departamento";
+    ViewData["Title"] = Model.Modo == "Crear" ? "Nuevo Departamento" :
+                        Model.Modo == "Editar" ? "Editar Departamento" : "Ver Departamento";
     Layout = "_LayoutGeneral";
     bool esModoLectura = Model.Modo == "Ver";
 }
@@ -12,7 +10,7 @@
 <div class="container-form">
     <h1 class="beige-text"><i class="fas fa-sitemap"></i> @ViewData["Title"]</h1>
 
-    <form method="post" class="form-beige">
+    <form method="post" class="form-beige" asp-antiforgery="true">
         <input type="hidden" asp-for="Departamento.Id" />
         <input type="hidden" asp-for="Modo" />
 
@@ -32,36 +30,41 @@
 
             <div class="col-md-6">
                 <div class="form-group">
-                    <label class="form-label">Áreas asociadas</label>
-                    @if (Model.Areas.Any())
-                    {
-                        @for (int i = 0; i < Model.Areas.Count; i++)
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0">Áreas asociadas</label>
+                        @if (!esModoLectura)
                         {
-                            <div class="form-check">
-                                <input type="hidden" asp-for="Areas[i].Id" />
-                                <input type="hidden" asp-for="Areas[i].Nombre" />
-                                <input class="form-check-input" type="checkbox" asp-for="Areas[i].Seleccionada" disabled="@esModoLectura" />
-                                <label class="form-check-label" asp-for="Areas[i].Seleccionada">@Model.Areas[i].Nombre</label>
-                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-beige" data-bs-toggle="modal" data-bs-target="#addAreaModal" title="Agregar Nueva Área">
+                                <i class="fas fa-plus"></i>
+                            </button>
                         }
-                    }
-                    else
-                    {
-                        <p class="text-muted">No se encontraron áreas disponibles.</p>
-                    }
+                    </div>
+                    <div id="areas-list-container" class="border p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                        @if (Model.Areas.Any())
+                        {
+                            @for (int i = 0; i < Model.Areas.Count; i++)
+                            {
+                                <div class="form-check">
+                                    <input type="hidden" asp-for="Areas[i].Id" />
+                                    <input type="hidden" asp-for="Areas[i].Nombre" />
+                                    <input class="form-check-input" type="checkbox" asp-for="Areas[i].Seleccionada" disabled="@esModoLectura" />
+                                    <label class="form-check-label" asp-for="Areas[i].Seleccionada">@Model.Areas[i].Nombre</label>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted" id="no-areas-msg">No se encontraron áreas disponibles.</p>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-actions">
-            @if (Model.Modo == "Crear")
+        <div class="form-actions mt-3">
+            @if (Model.Modo == "Crear" || Model.Modo == "Editar")
             {
                 <button type="submit" class="btn btn-beige">Guardar</button>
-                <a asp-page="Index" class="btn btn-cancelar">Cancelar</a>
-            }
-            else if (Model.Modo == "Editar")
-            {
-                <button type="submit" class="btn btn-beige">Actualizar</button>
                 <a asp-page="Index" class="btn btn-cancelar">Cancelar</a>
             }
             else // Modo "Ver"
@@ -73,6 +76,86 @@
     </form>
 </div>
 
+<div class="modal fade" id="addAreaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Nueva Área</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-area-alert" class="alert alert-danger d-none"></div>
+                <div class="form-group mb-2">
+                    <label for="newAreaNombre" class="form-label">Nombre del Área</label>
+                    <input type="text" id="newAreaNombre" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="newAreaDescripcion" class="form-label">Descripción (Opcional)</label>
+                    <textarea id="newAreaDescripcion" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-beige" id="btn-modal-save-area">Guardar</button>
+                <button type="button" class="btn btn-cancelar" data-bs-dismiss="modal">Cancelar</button>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const areaModal = document.getElementById('addAreaModal');
+            const saveAreaBtn = document.getElementById('btn-modal-save-area');
+            const areaAlert = document.getElementById('modal-area-alert');
+            const areasListContainer = document.getElementById('areas-list-container');
+
+            saveAreaBtn.addEventListener('click', async function () {
+                const body = {
+                    NombreArea: document.getElementById('newAreaNombre').value,
+                    Descripcion: document.getElementById('newAreaDescripcion').value
+                };
+
+                try {
+                    const response = await fetch('/Departamentos/DepaForm?handler=AddArea', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value },
+                        body: JSON.stringify(body)
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const newIndex = areasListContainer.querySelectorAll('.form-check').length;
+                        const noAreasMsg = document.getElementById('no-areas-msg');
+                        if (noAreasMsg) noAreasMsg.remove();
+
+                        const newCheckHtml = `
+                                    <div class="form-check">
+                                        <input type="hidden" name="Areas[${newIndex}].Id" value="${result.id}" />
+                                        <input type="hidden" name="Areas[${newIndex}].Nombre" value="${result.text}" />
+                                        <input class="form-check-input" type="checkbox" name="Areas[${newIndex}].Seleccionada" id="Areas_${newIndex}__Seleccionada" value="true" checked />
+                                        <label class="form-check-label" for="Areas_${newIndex}__Seleccionada">${result.text}</label>
+                                    </div>`;
+                        areasListContainer.insertAdjacentHTML('beforeend', newCheckHtml);
+
+                        bootstrap.Modal.getInstance(areaModal).hide();
+                    } else {
+                        areaAlert.textContent = result.message || 'Error al guardar.';
+                        areaAlert.classList.remove('d-none');
+                    }
+                } catch (e) {
+                    areaAlert.textContent = 'Error de conexión.';
+                    areaAlert.classList.remove('d-none');
+                }
+            });
+
+            areaModal.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('newAreaNombre').value = '';
+                document.getElementById('newAreaDescripcion').value = '';
+                areaAlert.classList.add('d-none');
+            });
+        });
+    </script>
 }
