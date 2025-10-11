@@ -17,8 +17,7 @@
         <div class="alert alert-success">@TempData["Mensaje"]</div>
     }
 
-    <!-- El form envía a ?handler=Generar (descargas). La previsualización llama a ?handler=Preview via JS en un iframe -->
-    <form id="frmReportes" method="get" asp-page-handler="Generar" class="border p-3 rounded bg-light">
+    <form id="frmReportes" method="get" class="border p-3 rounded bg-light">
         <div class="row g-3 align-items-end">
 
             <!-- Sección -->
@@ -32,7 +31,7 @@
                     var selMant = Model.Seccion == "Mantenimientos" ? "selected" : null;
                     var selUsr = Model.Seccion == "Usuarios" ? "selected" : null;
                 }
-                <select class="form-select" id="seccion" name="seccion" onchange="onSeccionChange(); loadPreview(); toggleDownloadButtons();">
+                <select class="form-select" id="seccion" name="Seccion" onchange="onSeccionChange(); loadPreview()">
                     <option value="">-- Seleccione --</option>
                     <option value="ActivosFijos" selected="@selAF">Activos Fijos</option>
                     <option value="Asignaciones" selected="@selAsig">Asignaciones</option>
@@ -43,12 +42,13 @@
                 </select>
             </div>
 
-            <!-- Filtros: Activos Fijos -->
-            <div class="col-md-8" id="filtros-af" style="display:none;">
+            <!-- ========= BLOQUES DE FILTROS ========= -->
+            <!-- Activos Fijos -->
+            <div class="col-md-8 filtro-bloque" id="filtros-af" style="display:none;">
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label">Departamento</label>
-                        <select class="form-select" name="idDepartamento" onchange="loadPreview()">
+                        <select class="form-select" name="IdDepartamento" data-for="ActivosFijos" onchange="loadPreview()">
                             <option value="">Todos</option>
                             @foreach (var d in Model.Departamentos)
                             {
@@ -57,49 +57,124 @@
                             }
                         </select>
                     </div>
+
                     <div class="col-md-4">
-                        <label class="form-label">Perfil</label>
-                        <select class="form-select" name="idPerfil" onchange="loadPreview()">
+                        <label class="form-label">Modelo</label>
+                        <select class="form-select" name="IdModelo" data-for="ActivosFijos" onchange="loadPreview()">
                             <option value="">Todos</option>
-                            @foreach (var p in Model.Perfiles)
+                            @foreach (var m in Model.Modelos)
                             {
-                                var sel = Model.IdPerfil == p.Id ? "selected" : null;
-                                <option value="@p.Id" selected="@sel">@p.Nombre</option>
+                                var sel = Model.IdModelo == m.Id ? "selected" : null;
+                                <option value="@m.Id" selected="@sel">@m.Nombre</option>
                             }
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Estado</label>
-                        <select class="form-select" name="estado" onchange="loadPreview()">
-                            <option value="">Todos</option>
-                            @foreach (var e in Model.EstadosLista)
-                            {
-                                var sel = Model.Estado == e.Nombre ? "selected" : null;
-                                <option value="@e.Nombre" selected="@sel">@e.Nombre</option>
-                            }
-                        </select>
-                    </div>
+
                     <div class="col-md-8">
                         <label class="form-label">Búsqueda (EtiquetaInv / S/N)</label>
-                        <input type="text" class="form-control" name="texto" value="@Model.TextoBusqueda" onblur="loadPreview()" />
+                        <input type="text" class="form-control" name="TextoBusqueda" data-for="ActivosFijos"
+                               value="@Model.TextoBusqueda" onblur="loadPreview()" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Compra (Desde)</label>
+                        <input type="date" class="form-control" name="FechaCompraInicio" data-for="ActivosFijos"
+                               value="@(Model.FechaCompraInicio?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Compra (Hasta)</label>
+                        <input type="date" class="form-control" name="FechaCompraFin" data-for="ActivosFijos"
+                               value="@(Model.FechaCompraFin?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
                     </div>
                 </div>
             </div>
 
-            <!-- Filtros: Mantenimientos -->
-            <div class="col-md-8" id="filtros-mant" style="display:none;">
+            <!-- Asignaciones -->
+            <div class="col-md-8 filtro-bloque" id="filtros-asig" style="display:none;">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Departamento</label>
+                        <select class="form-select" name="IdDepartamento" data-for="Asignaciones" onchange="loadPreview()">
+                            <option value="">Todos</option>
+                            @foreach (var d in Model.Departamentos)
+                            {
+                                var sel = Model.IdDepartamento == d.Id ? "selected" : null;
+                                <option value="@d.Id" selected="@sel">@d.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha (Desde)</label>
+                        <input type="date" class="form-control" name="FechaInicio" data-for="Asignaciones"
+                               value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha (Hasta)</label>
+                        <input type="date" class="form-control" name="FechaFin" data-for="Asignaciones"
+                               value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bitácora -->
+            <div class="col-md-8 filtro-bloque" id="filtros-bit" style="display:none;">
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label">Desde</label>
-                        <input type="date" class="form-control" name="fechaInicio" value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
+                        <input type="date" class="form-control" name="FechaInicio" data-for="Bitacora"
+                               value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Hasta</label>
-                        <input type="date" class="form-control" name="fechaFin" value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
+                        <input type="date" class="form-control" name="FechaFin" data-for="Bitacora"
+                               value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Texto (usuario / detalles)</label>
+                        <input type="text" class="form-control" name="TextoBusqueda" data-for="Bitacora"
+                               value="@Model.TextoBusqueda" onblur="loadPreview()" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empleados -->
+            <div class="col-md-8 filtro-bloque" id="filtros-emp" style="display:none;">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Departamento</label>
+                        <select class="form-select" name="IdDepartamento" data-for="Empleados" onchange="loadPreview()">
+                            <option value="">Todos</option>
+                            @foreach (var d in Model.Departamentos)
+                            {
+                                var sel = Model.IdDepartamento == d.Id ? "selected" : null;
+                                <option value="@d.Id" selected="@sel">@d.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Búsqueda (Nombre / Email)</label>
+                        <input type="text" class="form-control" name="TextoBusqueda" data-for="Empleados"
+                               value="@Model.TextoBusqueda" onblur="loadPreview()" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mantenimientos -->
+            <div class="col-md-8 filtro-bloque" id="filtros-mant" style="display:none;">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Desde</label>
+                        <input type="date" class="form-control" name="FechaInicio" data-for="Mantenimientos"
+                               value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Hasta</label>
+                        <input type="date" class="form-control" name="FechaFin" data-for="Mantenimientos"
+                               value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))" onchange="loadPreview()" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Equipo (AF)</label>
-                        <select class="form-select" name="idEquipo" onchange="loadPreview()">
+                        <select class="form-select" name="IdEquipo" data-for="Mantenimientos" onchange="loadPreview()">
                             <option value="">Todos</option>
                             @foreach (var eq in Model.Equipos)
                             {
@@ -110,7 +185,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Técnico</label>
-                        <select class="form-select" name="idTecnico" onchange="loadPreview()">
+                        <select class="form-select" name="IdTecnico" data-for="Mantenimientos" onchange="loadPreview()">
                             <option value="">Todos</option>
                             @foreach (var t in Model.Tecnicos)
                             {
@@ -122,92 +197,187 @@
                 </div>
             </div>
 
-            <!-- Botones -->
-            <div class="col-12 d-flex gap-2 mt-3">
-                <!-- Forzamos el handler explícitamente por botón -->
-                <button id="btnPdf" type="submit" formaction="?handler=Generar" name="formato" value="PDF" class="btn btn-primary">Descargar PDF</button>
-                <button id="btnXlsx" type="submit" formaction="?handler=Generar" name="formato" value="EXCELOPENXML" class="btn btn-success">Descargar Excel</button>
-                <button id="btnDocx" type="submit" formaction="?handler=Generar" name="formato" value="WORDOPENXML" class="btn btn-secondary">Descargar Word</button>
+            <!-- Usuarios -->
+            <div class="col-md-8 filtro-bloque" id="filtros-usr" style="display:none;">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Búsqueda (Usuario / Empleado)</label>
+                        <input type="text" class="form-control" name="TextoBusqueda" data-for="Usuarios"
+                               value="@Model.TextoBusqueda" onblur="loadPreview()" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Rol</label>
+                        <select class="form-select" name="IdRol" data-for="Usuarios" onchange="loadPreview()">
+                            <option value="">Todos</option>
+                            @foreach (var r in Model.Roles)
+                            {
+                                var sel = Model.IdRol == r.Id ? "selected" : null;
+                                <option value="@r.Id" selected="@sel">@r.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
 
-                <button type="button" class="btn btn-outline-primary ms-auto" onclick="loadPreview()">Previsualizar</button>
-                <a asp-page="./Index" class="btn btn-outline-dark">Limpiar</a>
+            <!-- Botones: izquierda descargas / derecha preview+limpiar -->
+            <div class="col-12 mt-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div class="d-flex flex-wrap gap-3">
+                        <button type="button" class="btn btn-warning" onclick="descargar('PDF')">Descargar PDF</button>
+                        <button type="button" class="btn btn-success" onclick="descargar('EXCELOPENXML')">Descargar Excel</button>
+                        <button type="button" class="btn btn-primary" onclick="descargar('WORDOPENXML')">Descargar Word</button>
+                    </div>
+                    <div class="d-flex flex-wrap gap-3">
+                        <button type="button" class="btn btn-secondary" onclick="loadPreview()">Previsualizar</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros()">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="col-12 mt-3">
+                <iframe id="previewFrame" title="Preview" style="width:100%; height:600px; border:1px solid #ccc;"></iframe>
             </div>
         </div>
     </form>
-
-    <!-- Previsualización -->
-    <div class="mt-4">
-        <h5 class="mb-2">Previsualización</h5>
-        <div class="border rounded" style="height: 75vh;">
-            <iframe id="previewFrame" title="Vista previa del reporte" style="width:100%; height:100%; border:0;"></iframe>
-        </div>
-    </div>
 </div>
 
 @section Scripts {
     <script>
-        function buildPreviewUrl() {
+        const filtrosPorSeccion = {
+            "ActivosFijos": ["IdDepartamento", "IdModelo", "TextoBusqueda", "FechaCompraInicio", "FechaCompraFin"],
+            "Asignaciones": ["IdDepartamento", "FechaInicio", "FechaFin"],
+            "Bitacora": ["FechaInicio", "FechaFin", "TextoBusqueda"],
+            "Empleados": ["IdDepartamento", "TextoBusqueda"],
+            "Mantenimientos": ["FechaInicio", "FechaFin", "IdEquipo", "IdTecnico"],
+            "Usuarios": ["TextoBusqueda", "IdRol"]
+        };
+
+        function showBlock(id, visible) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.display = visible ? '' : 'none';
+        }
+
+        function onSeccionChange() {
+            const s = document.getElementById('seccion').value;
+
+            showBlock('filtros-af', false);
+            showBlock('filtros-asig', false);
+            showBlock('filtros-bit', false);
+            showBlock('filtros-emp', false);
+            showBlock('filtros-mant', false);
+            showBlock('filtros-usr', false);
+
+            if (s === 'ActivosFijos') showBlock('filtros-af', true);
+            if (s === 'Asignaciones') showBlock('filtros-asig', true);
+            if (s === 'Bitacora') showBlock('filtros-bit', true);
+            if (s === 'Empleados') showBlock('filtros-emp', true);
+            if (s === 'Mantenimientos') showBlock('filtros-mant', true);
+            if (s === 'Usuarios') showBlock('filtros-usr', true);
+
+            marcarNoActivos(s);
+        }
+
+        function marcarNoActivos(seccion) {
             const f = document.getElementById('frmReportes');
-            const seccion = f.querySelector('[name="seccion"]').value;
-            if (!seccion) return ''; // sin sección, no generamos previa
+            const activos = new Set((filtrosPorSeccion[seccion] || []).map(s => s.toLowerCase()));
 
+            f.querySelectorAll('input[name], select[name]').forEach(el => {
+                const nameLower = (el.name || '').toLowerCase();
+
+                if (nameLower === 'seccion' || nameLower === 'formato' || nameLower === 'handler' || nameLower === 'debug' || el.id === 'seccion')
+                    return;
+
+                el.disabled = !activos.has(nameLower);
+            });
+        }
+
+        function currentFilterBlock() {
+            const seccion = document.getElementById('seccion').value;
+            const map = {
+                "ActivosFijos": "filtros-af",
+                "Asignaciones": "filtros-asig",
+                "Bitacora": "filtros-bit",
+                "Empleados": "filtros-emp",
+                "Mantenimientos": "filtros-mant",
+                "Usuarios": "filtros-usr"
+            };
+            return document.getElementById(map[seccion]);
+        }
+
+        function buildParams() {
             const params = new URLSearchParams();
+            const seccion = document.getElementById('seccion').value;
+            if (!seccion) return null;
+            params.set('Seccion', seccion);
+
+            const block = currentFilterBlock();
+            if (block) {
+                block.querySelectorAll('input[name]:not([disabled]),select[name]:not([disabled])').forEach(el => {
+                    const v = (el.value || '').trim();
+                    if (v) params.set(el.name, v);
+                });
+            }
+            return params;
+        }
+
+        function buildPreviewUrl() {
+            const params = buildParams();
+            if (!params) return null;
             params.set('handler', 'Preview');
-            params.set('seccion', seccion);
+            return `${window.location.pathname}?${params.toString()}`;
+        }
 
-            // Filtros comunes
-            const idDep = f.querySelector('[name="idDepartamento"]')?.value || '';
-            const idPer = f.querySelector('[name="idPerfil"]')?.value || '';
-            const estado = f.querySelector('[name="estado"]')?.value || '';
-            const texto = f.querySelector('[name="texto"]')?.value || '';
-            const fIni = f.querySelector('[name="fechaInicio"]')?.value || '';
-            const fFin = f.querySelector('[name="fechaFin"]')?.value || '';
-            const idEq = f.querySelector('[name="idEquipo"]')?.value || '';
-            const idTec = f.querySelector('[name="idTecnico"]')?.value || '';
-
-            if (idDep) params.set('idDepartamento', idDep);
-            if (idPer) params.set('idPerfil', idPer);
-            if (estado) params.set('estado', estado);
-            if (texto) params.set('texto', texto);
-            if (fIni) params.set('fechaInicio', fIni);
-            if (fFin) params.set('fechaFin', fFin);
-            if (idEq) params.set('idEquipo', idEq);
-            if (idTec) params.set('idTecnico', idTec);
-
-            // URL relativa a esta página
+        function buildDownloadUrl(formato) {
+            const params = buildParams();
+            if (!params) return null;
+            params.set('handler', 'Generar');
+            if (formato) params.set('formato', formato);
             return `${window.location.pathname}?${params.toString()}`;
         }
 
         function loadPreview() {
+            const seccion = document.getElementById('seccion').value;
+            if (!seccion) return;
+            marcarNoActivos(seccion);
             const url = buildPreviewUrl();
-            const frame = document.getElementById('previewFrame');
-            if (url) {
-                frame.src = url;
-            } else {
-                frame.removeAttribute('src');
+            if (url) document.getElementById('previewFrame').src = url;
+        }
+
+        function descargar(formato) {
+            const seccion = document.getElementById('seccion').value;
+            if (!seccion) { alert('Seleccione una sección.'); return; }
+            marcarNoActivos(seccion);
+            const url = buildDownloadUrl(formato);
+            if (url) window.location.href = url;
+        }
+
+        function limpiarFiltros() {
+            const seccion = document.getElementById('seccion').value;
+            if (!seccion) return;
+
+            const block = currentFilterBlock();
+            if (block) {
+                block.querySelectorAll('input[name], select[name]').forEach(el => {
+                    if (el.tagName === 'SELECT') {
+                        el.value = '';
+                    } else if (el.type === 'date' || el.type === 'text' || el.type === 'number') {
+                        el.value = '';
+                    }
+                });
             }
+
+            const params = new URLSearchParams();
+            params.set('Seccion', seccion);
+            params.set('handler', 'Preview');
+            const url = `${window.location.pathname}?${params.toString()}`;
+            document.getElementById('previewFrame').src = url;
         }
 
-        function onSeccionChange() {
-            var s = document.getElementById('seccion').value;
-            document.getElementById('filtros-af').style.display = (s === 'ActivosFijos' || s === 'Asignaciones' || s === 'Usuarios' || s === 'Empleados' || s === 'Bitacora') ? 'block' : 'none';
-            document.getElementById('filtros-mant').style.display = (s === 'Mantenimientos') ? 'block' : 'none';
-        }
-
-        function toggleDownloadButtons() {
-            const hasSection = document.getElementById('seccion').value !== '';
-            document.getElementById('btnPdf').disabled = !hasSection;
-            document.getElementById('btnXlsx').disabled = !hasSection;
-            document.getElementById('btnDocx').disabled = !hasSection;
-        }
-
-        // Inicializar estado al cargar
-        onSeccionChange();
-        toggleDownloadButtons();
-
-        // Si ya viene sección preseleccionada, cargar previa
-        if (document.getElementById('seccion').value) {
-            loadPreview();
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            onSeccionChange();
+            if (document.getElementById('seccion').value) loadPreview();
+        });
     </script>
 }

@@ -61,6 +61,14 @@
             </a>
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser">
                 <li>
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#dbConnModal">
+                        <i class="fas fa-database me-2"></i> Conexión a BDD
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+
+                <li><hr class="dropdown-divider"></li>
+                <li>
                     <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                         <i class="fas fa-key me-2"></i> Cambiar contraseña
                     </a>
@@ -91,6 +99,65 @@
             </div>
         </footer>
     </div>
+
+    <div class="modal fade" id="dbConnModal" tabindex="-1" aria-labelledby="dbConnModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dbConnModalLabel"><i class="fas fa-database me-2"></i> Conexión a Base de Datos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="dbConnForm" asp-antiforgery="true">
+                        <div id="dbConnAlert" class="alert d-none" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label for="dbServidor" class="form-label">Servidor</label>
+                            <input type="text" class="form-control" id="dbServidor" name="Servidor" placeholder="e.g. SQLSERVER\\INSTANCIA o 192.168.1.10" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="dbNombre" class="form-label">Base de Datos</label>
+                            <input type="text" class="form-control" id="dbNombre" name="BaseDatos" placeholder="e.g. InventarioComputo" required>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="dbIntegrated" name="IntegratedSecurity" checked>
+                            <label class="form-check-label" for="dbIntegrated">
+                                Usar Seguridad Integrada (Windows)
+                            </label>
+                        </div>
+
+                        <div id="dbCreds" class="row g-2">
+                            <div class="col-6">
+                                <label for="dbUser" class="form-label">Usuario (SQL)</label>
+                                <input type="text" class="form-control" id="dbUser" name="Usuario" placeholder="(opcional)">
+                            </div>
+                            <div class="col-6">
+                                <label for="dbPass" class="form-label">Contraseña</label>
+                                <input type="password" class="form-control" id="dbPass" name="Contrasena" placeholder="(opcional)">
+                            </div>
+                        </div>
+
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="dbTrust" name="TrustServerCertificate">
+                            <label class="form-check-label" for="dbTrust">
+                                Confiar en certificado del servidor (solo si tu entorno lo requiere)
+                            </label>
+                        </div>
+
+                        <div class="modal-footer mt-3">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Conexión</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
 
     <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -199,6 +266,69 @@
         passwordModal.addEventListener('hidden.bs.modal', function () {
             document.getElementById('changePasswordForm').reset();
             document.getElementById('passwordChangeAlert').classList.add('d-none');
+        });
+
+        // Toggle de credenciales según seguridad integrada
+        const dbIntegratedChk = document.getElementById('dbIntegrated');
+        const dbCredsBlock = document.getElementById('dbCreds');
+        function toggleCreds() {
+            const useIntegrated = dbIntegratedChk.checked;
+            dbCredsBlock.style.display = useIntegrated ? 'none' : '';
+            document.getElementById('dbUser').disabled = useIntegrated;
+            document.getElementById('dbPass').disabled = useIntegrated;
+        }
+        dbIntegratedChk.addEventListener('change', toggleCreds);
+        toggleCreds();
+
+        // Envío del formulario
+        document.getElementById('dbConnForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const alertBox = document.getElementById('dbConnAlert');
+            const formData = new FormData(form);
+
+            // Endpoint sugerido (ajústalo al que implementes en tu Razor Page):
+            // Pages/ConexionBDD.cshtml.cs -> OnPostActualizarAsync()
+            const url = '/ConexionBDD?handler=Actualizar';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: new URLSearchParams(formData)
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status} (${response.statusText})`);
+                    return response.json();
+                })
+                .then(data => {
+                    alertBox.textContent = data.message || 'Conexión actualizada.';
+                    alertBox.className = 'alert';
+                    alertBox.classList.remove('d-none');
+
+                    if (data.success) {
+                        alertBox.classList.add('alert-success');
+                        // Recarga para que toda la app tome la nueva cadena
+                        setTimeout(() => window.location.reload(), 1200);
+                    } else {
+                        alertBox.classList.add('alert-danger');
+                    }
+                })
+                .catch(error => {
+                    alertBox.textContent = `Error: ${error.message}.`;
+                    alertBox.className = 'alert alert-danger';
+                    alertBox.classList.remove('d-none');
+                });
+        });
+
+        // Limpiar modal al cerrar
+        const dbConnModal = document.getElementById('dbConnModal');
+        dbConnModal.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('dbConnForm').reset();
+            document.getElementById('dbConnAlert').classList.add('d-none');
+            toggleCreds();
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)

@@ -1,20 +1,30 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using System;
 using System.Data;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 
 public class ConexionBDD
 {
     private readonly IConfiguration _configuration;
-    private readonly string _connectionString;
+    private string _connectionString;             
+    private readonly object _lock = new();        
 
     public ConexionBDD(IConfiguration configuration)
     {
         _configuration = configuration;
         _connectionString = _configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(_connectionString))
+            throw new InvalidOperationException("No se encontró la cadena 'DefaultConnection'.");
     }
 
     public SqlConnection GetConnection()
     {
-        var connection = new SqlConnection(_connectionString);
+        string cs;
+        lock (_lock) { cs = _connectionString; }
+
+        var connection = new SqlConnection(cs);
         try
         {
             if (connection.State != ConnectionState.Open)
@@ -26,17 +36,19 @@ public class ConexionBDD
         catch (SqlException ex)
         {
             Console.WriteLine($"Error de conexión: {ex.Message}");
-            throw; 
+            throw;
         }
     }
 
     public async Task<SqlConnection> GetConnectionAsync()
     {
-        var connection = new SqlConnection(_connectionString);
+        string cs;
+        lock (_lock) { cs = _connectionString; }
+
+        var connection = new SqlConnection(cs);
         try
         {
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // Timeout de 30 segundos
-
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // Timeout de 30 segundos
             await connection.OpenAsync(cts.Token);
 
             if (connection.State != ConnectionState.Open)
@@ -54,5 +66,18 @@ public class ConexionBDD
         {
             throw new Exception($"Error SQL: {ex.Message}");
         }
+    }
+
+    public Task UpdateConnectionStringAsync(string newConnectionString)
+    {
+        if (string.IsNullOrWhiteSpace(newConnectionString))
+            throw new ArgumentException("Cadena de conexión inválida.", nameof(newConnectionString));
+
+
+        lock (_lock)
+        {
+            _connectionString = newConnectionString;
+        }
+        return Task.CompletedTask;
     }
 }
