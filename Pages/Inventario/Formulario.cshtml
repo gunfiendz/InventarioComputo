@@ -68,11 +68,12 @@
         <div class="form-actions mt-4">
             @if (!esModoLectura)
             {
-                <button type="submit" class="btn btn-beige">Guardar</button> <a href="/Inventario" class="btn btn-cancelar">Cancelar</a>
+                <button type="submit" class="btn btn-beige">Guardar</button> 
+                <a href="/Inventario" class="btn btn-cancelar">Cancelar</a>
             }
             else
             {
-                <a href="/Inventario/Formulario/Editar/@Model.Equipo.IdActivoFijo" class="btn btn-beige">Editar</a> <a href="/Inventario" class="btn btn-cancelar">Volver</a>
+                <a href="/Inventario" class="btn btn-cancelar">Volver</a>
             }
         </div>
     </form>

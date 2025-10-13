@@ -4,11 +4,23 @@
     ViewData["Title"] = "Inventario Activos Fijos";
     Layout = "_LayoutGeneral";
 }
+@using InventarioComputo.Security
+@inject PermisosService Perms
+
+@{
+    // Calculamos permisos una sola vez para esta vista
+    var canModActivos = await Perms.TieneAsync(User, PermisosConstantes.ModificarActivos);
+    var canModEquipos = await Perms.TieneAsync(User, PermisosConstantes.ModificarEquipos);
+    var canModMantenimientos = await Perms.TieneAsync(User, PermisosConstantes.ModificarMantenimientos);
+    var hasRoot = await Perms.TieneAsync(User, PermisosConstantes.AccesoTotal);
+}
 
 <div class="inventario-container">
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-laptop"></i> Inventario de Equipos</h1>
-        @if (Model.RolUsuario != "Usuario")
+
+        @* Botones de alta masiva / nuevo: requieren ModificarActivos *@
+        @if (canModActivos)
         {
             <a href="/Inventario/FormMasivo" class="btn btn-beige">
                 <i class="fas fa-plus"></i> Agregar Varios Equipos
@@ -220,19 +232,22 @@
                         </td>
                         <td>@(equipo.AsignadoA ?? "No asignado")</td>
                         <td class="acciones">
-                            @if (Model.RolUsuario == "Auditor")
+                            @* Ver / Editar: si puede modificar activos mostramos Editar; si no, solo Ver *@
+                            @if (canModActivos)
                             {
-                                <a href="/Inventario/Formulario/Ver/@equipo.id_activofijo" class="btn btn-action">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                            }
-                            @if (Model.RolUsuario != "Auditor")
-                            {
-                                <a href="/Inventario/Formulario/Editar/@equipo.id_activofijo" class="btn btn-action">
+                                <a href="/Inventario/Formulario/Editar/@equipo.id_activofijo" class="btn btn-action" title="Editar">
                                     <i class="fas fa-pen"></i>
                                 </a>
                             }
-                            @if (Model.RolUsuario != "Auditor")
+                            else
+                            {
+                                <a href="/Inventario/Formulario/Ver/@equipo.id_activofijo" class="btn btn-action" title="Ver">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            }
+
+                            @* Asignar: requiere ModificarEquipos *@
+                            @if (canModEquipos)
                             {
                                 <button class="btn btn-action btn-asignar"
                                         data-id="@equipo.id_activofijo"
@@ -240,7 +255,9 @@
                                     <i class="fas fa-user-check"></i>
                                 </button>
                             }
-                            @if (Model.RolUsuario != "Auditor")
+
+                            @* Registrar mantenimiento: requiere ModificarMantenimientos *@
+                            @if (canModMantenimientos)
                             {
                                 <button class="btn btn-action btn-mantenimiento"
                                         data-id="@equipo.id_activofijo"
@@ -248,7 +265,9 @@
                                     <i class="fas fa-tools"></i>
                                 </button>
                             }
-                            @if (Model.RolUsuario == "Administrador")
+
+                            @* Eliminar: lo restringimos a AccesoTotal (antes era solo Administrador) *@
+                            @if (hasRoot)
                             {
                                 <button class="btn btn-action btn-eliminar"
                                         data-id="@equipo.id_activofijo"
@@ -332,7 +351,7 @@
     <script src="~/js/Script_Tablas.js" asp-append-version="true"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Lógica para el botón de Mantenimiento
+            // Mantenimiento
             document.querySelectorAll('.btn-mantenimiento').forEach(btn => {
                 btn.addEventListener('click', function () {
                     const idEquipo = this.getAttribute('data-id');
@@ -340,6 +359,7 @@
                 });
             });
 
+            // Asignar
             document.querySelectorAll('.btn-asignar').forEach(btn => {
                 btn.addEventListener('click', function () {
                     const idEquipo = this.getAttribute('data-id');
@@ -347,7 +367,7 @@
                 });
             });
 
-            // Lógica para el botón de Eliminar
+            // Eliminar
             let idActivoFijo = null;
             document.querySelectorAll('.btn-eliminar').forEach(btn => {
                 btn.addEventListener('click', function () {

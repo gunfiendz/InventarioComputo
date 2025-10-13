@@ -7,6 +7,13 @@
 
     bool esModoLectura = Model.Modo == "Ver";
 }
+@using InventarioComputo.Security
+@inject PermisosService Perms
+
+@{
+    var canModMantenimientos = await Perms.TieneAsync(User, PermisosConstantes.ModificarMantenimientos);
+    var hasRoot = await Perms.TieneAsync(User, PermisosConstantes.AccesoTotal);
+}
 
 <div class="container-form">
     <h1 class="beige-text"><i class="fas fa-tools"></i> @ViewData["Title"]</h1>
@@ -90,14 +97,16 @@
         @if (!esModoLectura)
         {
             <div class="form-actions">
-                <button type="submit" class="btn btn-beige">Guardar</button>
+                @if (canModMantenimientos)
+                {
+                    <button type="submit" class="btn btn-beige">Guardar</button>
+                }
                 <a href="/Mantenimientos/Index  " class="btn btn-cancelar">Cancelar</a>
             </div>
         }
         else
         {
             <div class="form-actions">
-                <a href="/Mantenimientos/Editar/@Model.Mantenimiento.IdMantenimientoEquipo" class="btn btn-beige">Editar</a>
                 <a href="/Mantenimientos/Index" class="btn btn-cancelar">Volver</a>
             </div>
         }

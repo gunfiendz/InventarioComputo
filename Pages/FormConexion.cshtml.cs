@@ -20,22 +20,30 @@ namespace InventarioComputo.Pages
         public void OnGet() { }
 
         // GET /FormConexion?handler=Actual
-        // Devuelve (si se puede) la info actual; si tu servicio no la expone, retorna valores por defecto.
         public JsonResult OnGetActual()
         {
-            // Si tu ConexionBDD expone algo como GetCurrentInfo(), puedes usarlo aquí.
-            // Para no romper nada, devolvemos placeholders.
+            var info = _dbConnection.GetCurrentInfo();
+            if (info == null)
+            {
+                return new JsonResult(new
+                {
+                    servidor = "",
+                    baseDatos = "",
+                    integratedSecurity = true,
+                    trustServerCertificate = false
+                });
+            }
+
             return new JsonResult(new
             {
-                servidor = "",
-                baseDatos = "",
-                integratedSecurity = true,
-                trustServerCertificate = false
+                servidor = info.Value.Servidor,
+                baseDatos = info.Value.BaseDatos,
+                integratedSecurity = info.Value.IntegratedSecurity,
+                trustServerCertificate = info.Value.TrustServerCertificate
             });
         }
 
         // POST /FormConexion?handler=Actualizar
-        // Recibe los datos del modal, arma la connection string, la prueba y la aplica en runtime.
         public async Task<JsonResult> OnPostActualizarAsync(
             string Servidor,
             string BaseDatos,
@@ -45,8 +53,15 @@ namespace InventarioComputo.Pages
             bool TrustServerCertificate)
         {
             if (string.IsNullOrWhiteSpace(Servidor) || string.IsNullOrWhiteSpace(BaseDatos))
-            {
                 return new JsonResult(new { success = false, message = "Servidor y Base de Datos son obligatorios." });
+
+            if (!IntegratedSecurity)
+            {
+                if (string.IsNullOrWhiteSpace(Usuario) || string.IsNullOrWhiteSpace(Contrasena))
+                    return new JsonResult(new { success = false, message = "Debes ingresar Usuario y Contraseña cuando desmarcas Seguridad Integrada." });
+
+                Usuario = Usuario!.Trim();
+                Contrasena = Contrasena!.Trim();
             }
 
             try
@@ -56,33 +71,57 @@ namespace InventarioComputo.Pages
                     DataSource = Servidor,
                     InitialCatalog = BaseDatos,
                     IntegratedSecurity = IntegratedSecurity,
-                    TrustServerCertificate = TrustServerCertificate,
                     MultipleActiveResultSets = true
                 };
 
                 if (!IntegratedSecurity)
                 {
-                    csb.UserID = Usuario ?? "";
-                    csb.Password = Contrasena ?? "";
+                    if (string.IsNullOrWhiteSpace(Usuario) || string.IsNullOrWhiteSpace(Contrasena))
+                        return new JsonResult(new { success = false, message = "Debes ingresar Usuario y Contraseña cuando desmarcas Seguridad Integrada." });
+                }
+                else
+                {
+                    Usuario = null;
+                    Contrasena = null;
                 }
 
-                // 1) Verificar conexión (abre/cierra)
+
+                // Cifrado / certificado
+                if (TrustServerCertificate)
+                {
+                    csb.Encrypt = true;
+                    csb.TrustServerCertificate = true;
+                }
+                else
+                {
+                    csb.Encrypt = false;
+                    csb.TrustServerCertificate = false;
+                }
+
+                // Log seguro (no expone password)
+                var safe = new SqlConnectionStringBuilder(csb.ConnectionString) { Password = "****" }.ConnectionString;
+                _logger.LogInformation("Probando conexión con: {Conn}", safe);
+
+                // Probar conexión
                 using (var testConn = new SqlConnection(csb.ConnectionString))
                 {
                     await testConn.OpenAsync();
                     await testConn.CloseAsync();
                 }
 
-                // 2) Actualizar en runtime la cadena usada por tu app
-                //    -> agrega el método UpdateConnectionStringAsync en tu ConexionBDD (ver más abajo).
+                // 1) Activar en runtime
                 await _dbConnection.UpdateConnectionStringAsync(csb.ConnectionString);
 
-                return new JsonResult(new { success = true, message = "Conexión actualizada." });
+                // 2) Persistir para próximos arranques (App_Data/conn.json)
+                await _dbConnection.PersistConnectionStringAsync(csb.ConnectionString);
+
+                return new JsonResult(new { success = true, message = "Conexión actualizada y guardada." });
             }
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "Error actualizando conexión a BDD");
-                return new JsonResult(new { success = false, message = "Ocurrió un error al validar/actualizar la conexión." });
+                var detail = ex.InnerException?.Message ?? ex.Message;
+                return new JsonResult(new { success = false, message = detail });
             }
         }
     }

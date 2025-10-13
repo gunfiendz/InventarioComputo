@@ -5,7 +5,7 @@
     Layout = "_LayoutGeneral";
 }
 
-<div class="inventario-container">
+<div class="inventario-container no-x-scroll">
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-user-lock"></i> @ViewData["Title"]</h1>
     </div>
@@ -14,38 +14,69 @@
     {
         <div class="alert alert-success">@TempData["SuccessMessage"]</div>
     }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
 
     <form method="post">
-        <div class="table-responsive">
-            <table class="table table-hover table-beige">
-                <thead>
-                    <tr>
-                        <th>Usuario</th>
-                        <th class="text-center">Ver Informes</th>
-                        <th class="text-center">Modificar Activos</th>
-                        <th class="text-center">Modificar Usuarios</th>
-                        <th class="text-center">Realizar Mantenimientos</th>
-                        <th class="text-center bg-dark text-white">Acceso Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (int i = 0; i < Model.ListaPermisos.Count; i++)
-                    {
-                        <tr class="permisos-row">
-                            <input type="hidden" asp-for="ListaPermisos[i].IdUsuario" />
-                            <input type="hidden" asp-for="ListaPermisos[i].Username" />
+        <div class="tabla-wrap">
+            <div class="tabla-scroll scroll-area">
+                <table class="table table-hover table-beige permisos-table table-max-content sticky-header sticky-firstcol">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
 
-                            <td><strong>@Model.ListaPermisos[i].Username</strong></td>
+                            <!-- Ver / Lectura -->
+                            <th class="text-center">Ver Empleados</th>
+                            <th class="text-center">Ver Usuarios</th>
+                            <th class="text-center">Ver ConexionBDD</th>
+                            <th class="text-center">Ver Reportes</th>
+                            <th class="text-center">Ver Bitácora</th>
 
-                            <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].VerInformes" /></td>
-                            <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarActivos" /></td>
-                            <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarUsuarios" /></td>
-                            <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].RealizarMantenimientos" /></td>
-                            <td class="text-center"><input type="checkbox" class="form-check-input acceso-total-check" asp-for="ListaPermisos[i].AccesoTotal" /></td>
+                            <!-- Modificar / Escritura -->
+                            <th class="text-center">Modificar Activos</th>
+                            <th class="text-center">Modificar Mantenimientos</th>
+                            <th class="text-center">Modificar Equipos</th>
+                            <th class="text-center">Modificar Departamentos</th>
+                            <th class="text-center">Modificar Empleados</th>
+                            <th class="text-center">Modificar Usuarios</th>
+
+                            <th class="text-center bg-dark text-white">Acceso Total</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.ListaPermisos.Count; i++)
+                        {
+                            <tr class="permisos-row">
+                                <input type="hidden" asp-for="ListaPermisos[i].IdUsuario" />
+                                <input type="hidden" asp-for="ListaPermisos[i].Username" />
+
+                                <td><strong>@Model.ListaPermisos[i].Username</strong></td>
+
+                                <!-- Ver / Lectura -->
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].VerEmpleados" /></td>
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].VerUsuarios" /></td>
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].VerConexionBDD" /></td>
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].VerReportes" /></td>
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].VerBitacora" /></td>
+
+                                <!-- Modificar / Escritura -->
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarActivos" /></td>
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarMantenimientos" /></td>
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarEquipos" /></td>
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarDepartamentos" /></td>
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarEmpleados" /></td>
+                                <td class="text-center"><input type="checkbox" class="form-check-input permiso-check" asp-for="ListaPermisos[i].ModificarUsuarios" /></td>
+
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input acceso-total-check" asp-for="ListaPermisos[i].AccesoTotal" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="form-actions mt-4">
@@ -58,7 +89,6 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Función para actualizar los checkboxes de una fila
             function actualizarFila(row, estaMarcado) {
                 const permisos = row.querySelectorAll('.permiso-check');
                 permisos.forEach(permiso => {
@@ -70,15 +100,11 @@
                     }
                 });
             }
-
-            // Aplicar la lógica a cada checkbox de "Acceso Total"
             const checkboxesAccesoTotal = document.querySelectorAll('.acceso-total-check');
             checkboxesAccesoTotal.forEach(checkbox => {
-                // Ejecutar al cargar la página para el estado inicial
                 const filaInicial = checkbox.closest('.permisos-row');
                 actualizarFila(filaInicial, checkbox.checked);
 
-                // Ejecutar cada vez que se haga clic
                 checkbox.addEventListener('change', function () {
                     const fila = this.closest('.permisos-row');
                     actualizarFila(fila, this.checked);

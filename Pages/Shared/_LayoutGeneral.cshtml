@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@using InventarioComputo.Security
+@inject PermisosService Perms
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
@@ -24,31 +26,55 @@
                         <i class="fas fa-home"></i> <span>Dashboard</span>
                     </a>
                 </li>
+
                 <li class="nav-item">
                     <a class="nav-link @IsActive("Inventario")" asp-page="/Inventario/Index">
                         <i class="fas fa-laptop"></i> <span>Inventario</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link @IsActive("Asignaciones")" asp-page="/Asignaciones/Index">
-                        <i class="fas fa-user-check"></i> <span>Asignaciones</span>
-                    </a>
-                </li>
+
+                @* Asignaciones: requiere ModificarEquipos *@
+                @if (await Perms.TieneAsync(User, PermisosConstantes.ModificarEquipos))
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Asignaciones")" asp-page="/Asignaciones/Index">
+                            <i class="fas fa-user-check"></i> <span>Asignaciones</span>
+                        </a>
+                    </li>
+                }
+
                 <li class="nav-item">
                     <a class="nav-link @IsActive("Mantenimientos")" asp-page="/Mantenimientos/Index">
                         <i class="fas fa-tools"></i> <span>Mantenimientos</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link @IsActive("Reportes")" asp-page="/Reportes/Index">
-                        <i class="fas fa-chart-pie"></i> <span>Reportes</span>
-                    </a>
-                </li>
-                @if (User.IsInRole("Administrador"))
+
+                @* Reportes: visible solo con VerReportes *@
+                @if (await Perms.TieneAsync(User, PermisosConstantes.VerReportes))
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Reportes")" asp-page="/Reportes/Index">
+                            <i class="fas fa-chart-pie"></i> <span>Reportes</span>
+                        </a>
+                    </li>
+                }
+
+                @* Usuarios: visible solo con VerUsuarios *@
+                @if (await Perms.TieneAsync(User, PermisosConstantes.VerUsuarios))
                 {
                     <li class="nav-item">
                         <a class="nav-link @IsActive("Usuarios")" asp-page="/Usuarios/Index">
                             <i class="fas fa-user-shield"></i> <span>Usuarios</span>
+                        </a>
+                    </li>
+                }
+
+                @* (Opcional) Bitácora: visible con VerBitacora (si tienes este permiso y página) *@
+                @if (await Perms.TieneAsync(User, PermisosConstantes.VerBitacora))
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Bitacora")" asp-page="/Bitacora/Index">
+                            <i class="fas fa-book"></i> <span>Bitácora</span>
                         </a>
                     </li>
                 }
@@ -60,14 +86,17 @@
                 <span class="username">@User.Identity?.Name</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser">
-                <li>
-                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#dbConnModal">
-                        <i class="fas fa-database me-2"></i> Conexión a BDD
-                    </a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
+                @* Conexión BDD: visible solo con VerConexionBDD *@
+                @if (await Perms.TieneAsync(User, PermisosConstantes.VerConexionBDD))
+                {
+                    <li>
+                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#dbConnModal">
+                            <i class="fas fa-database me-2"></i> Conexión a BDD
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                }
 
-                <li><hr class="dropdown-divider"></li>
                 <li>
                     <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                         <i class="fas fa-key me-2"></i> Cambiar contraseña
@@ -288,9 +317,10 @@
             const alertBox = document.getElementById('dbConnAlert');
             const formData = new FormData(form);
 
-            // Endpoint sugerido (ajústalo al que implementes en tu Razor Page):
-            // Pages/ConexionBDD.cshtml.cs -> OnPostActualizarAsync()
-            const url = '/ConexionBDD?handler=Actualizar';
+            formData.set("IntegratedSecurity", document.getElementById("dbIntegrated").checked);
+            formData.set("TrustServerCertificate", document.getElementById("dbTrust").checked);
+
+            const url = '/FormConexion?handler=Actualizar';
 
             fetch(url, {
                 method: 'POST',

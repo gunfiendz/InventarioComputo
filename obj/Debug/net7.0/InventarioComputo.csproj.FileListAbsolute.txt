@@ -114,3 +114,4 @@ C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net7.0\InventarioComputo.pdb
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net7.0\InventarioComputo.genruntimeconfig.cache
 C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\obj\Debug\net7.0\ref\InventarioComputo.dll
+C:\Users\Ramon Zavala\source\repos\InventarioComputo\InventarioComputo\bin\Debug\net7.0\App_Data\conn.json

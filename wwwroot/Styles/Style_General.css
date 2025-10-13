@@ -178,3 +178,41 @@ body {
         display: block; /* Muestra el botón en móviles */
     }
 }
+
+/* ===== utilidades de scroll para tablas anchas ===== */
+.no-x-scroll { /* evita scroll horizontal del contenedor donde se aplique */
+    overflow-x: hidden;
+}
+
+.scroll-area { /* área con el ÚNICO scroll (x e y) */
+    position: relative;
+    max-height: 70vh; /* ajusta 60–80vh a gusto */
+    overflow: auto;
+    width: 100%;
+}
+
+.table-max-content { /* la tabla no “empuja” el body; solo ancho necesario */
+    width: max-content;
+    min-width: 100%;
+    white-space: nowrap;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.sticky-header thead th { /* encabezado fijo al hacer scroll vertical */
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f8f9fa; /* o tu tono */
+}
+
+/* primera columna fija (opcional) */
+.sticky-firstcol th:first-child,
+.sticky-firstcol td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: #fff; /* que combine con tus filas */
+}
+

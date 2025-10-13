@@ -1,10 +1,14 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using InventarioComputo.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<ConexionBDD>();
+
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<PermisosService>();
 
 // Configuración simplificada de autenticación
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

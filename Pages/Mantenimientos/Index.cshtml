@@ -4,13 +4,25 @@
     ViewData["Title"] = "Gestión de Mantenimientos";
     Layout = "_LayoutGeneral";
 }
+@using InventarioComputo.Security
+@inject PermisosService Perms
+
+@{
+    var canModMantenimientos = await Perms.TieneAsync(User, PermisosConstantes.ModificarMantenimientos);
+    var hasRoot = await Perms.TieneAsync(User, PermisosConstantes.AccesoTotal);
+}
 
 <div class="inventario-container">
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-tools"></i> @ViewData["Title"]</h1>
-        <a href="/Mantenimientos/PruebaFormulario" class="btn btn-beige">
-            <i class="fas fa-plus"></i> Nuevo Mantenimiento
-        </a>
+
+        @* Crear nuevo mantenimiento: requiere ModificarMantenimientos *@
+        @if (canModMantenimientos)
+        {
+            <a href="/Mantenimientos/PruebaFormulario" class="btn btn-beige">
+                <i class="fas fa-plus"></i> Nuevo Mantenimiento
+            </a>
+        }
     </div>
 
     <div class="filtros-container beige-bg">
@@ -152,15 +164,30 @@
                         <td>@mantenimiento.Descripcion</td>
                         <td>@mantenimiento.Tecnico</td>
                         <td class="acciones">
-                            <a href="/Mantenimientos/PruebaFormulario/Editar/@mantenimiento.Id" class="btn btn-action">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <button class="btn btn-action btn-eliminar"
-                                    data-id="@mantenimiento.Id"
-                                    data-descripcion="@mantenimiento.Descripcion"
-                                    title="Eliminar">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            @* Si puede modificar: Editar. Si no: Ver (solo lectura) *@
+                            @if (canModMantenimientos)
+                            {
+                                <a href="/Mantenimientos/PruebaFormulario/Editar/@mantenimiento.Id" class="btn btn-action" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="/Mantenimientos/PruebaFormulario/Ver/@mantenimiento.Id" class="btn btn-action" title="Ver">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            }
+
+                            @* Eliminar: solo AccesoTotal *@
+                            @if (hasRoot)
+                            {
+                                <button class="btn btn-action btn-eliminar"
+                                        data-id="@mantenimiento.Id"
+                                        data-descripcion="@mantenimiento.Descripcion"
+                                        title="Eliminar">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            }
                         </td>
                     </tr>
                 }
@@ -219,7 +246,7 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Lógica para el ordenamiento de las tablas (si no está en otro archivo)
+        // Ordenamiento
         document.querySelectorAll('.sort-link').forEach(link => {
             link.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -236,7 +263,7 @@
             });
         });
 
-        // Lógica para aplicar los filtros
+        // Filtros
         document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
             const tipo = document.getElementById('filtro-tipo').value;
             const equipo = document.getElementById('filtro-equipo').value;
@@ -248,7 +275,6 @@
             const url = new URL(window.location.href);
             url.searchParams.set('pagina', '1');
 
-            // Reemplazar o eliminar parámetros de filtro según su valor
             url.searchParams.set('tipo', tipo);
             url.searchParams.set('equipo', equipo);
             url.searchParams.set('tecnico', tecnico);
@@ -259,7 +285,7 @@
             window.location.href = url.toString();
         });
 
-        // Lógica para el botón de Eliminar
+        // Eliminar
         let idMantenimientoAEliminar = null;
         document.querySelectorAll('.btn-eliminar').forEach(btn => {
             btn.addEventListener('click', function () {

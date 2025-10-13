@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using InventarioComputo.Data;
+using InventarioComputo.Security; // <- para PermisosService
 
 namespace InventarioComputo.Pages
 {
@@ -13,14 +14,19 @@ namespace InventarioComputo.Pages
     {
         private readonly ConexionBDD _dbConnection;
         private readonly ILogger<FormPermisosModel> _logger;
+        private readonly PermisosService _permisosService; // <- cache de permisos
 
         [BindProperty]
         public List<UsuarioPermisosViewModel> ListaPermisos { get; set; } = new List<UsuarioPermisosViewModel>();
 
-        public FormPermisosModel(ConexionBDD dbConnection, ILogger<FormPermisosModel> logger)
+        public FormPermisosModel(
+            ConexionBDD dbConnection,
+            ILogger<FormPermisosModel> logger,
+            PermisosService permisosService) // <- inyéctalo
         {
             _dbConnection = dbConnection;
             _logger = logger;
+            _permisosService = permisosService;
         }
 
         public async Task OnGetAsync()
@@ -29,14 +35,23 @@ namespace InventarioComputo.Pages
             {
                 var query = @"
                     SELECT
-                        u.id_usuario, u.Username,
-                        ISNULL(p.VerInformes, 0) AS VerInformes,
-                        ISNULL(p.ModificarActivos, 0) AS ModificarActivos,
-                        ISNULL(p.ModificarUsuarios, 0) AS ModificarUsuarios,
-                        ISNULL(p.RealizarMantenimientos, 0) AS RealizarMantenimientos,
-                        ISNULL(p.AccesoTotal, 0) AS AccesoTotal
-                    FROM Usuarios u
-                    LEFT JOIN PermisosUsuarios p ON u.id_usuario = p.id_usuario
+                        u.id_usuario,
+                        u.Username,
+                        ISNULL(p.VerEmpleados, 0)            AS VerEmpleados,
+                        ISNULL(p.VerUsuarios, 0)             AS VerUsuarios,
+                        ISNULL(p.VerConexionBDD, 0)          AS VerConexionBDD,
+                        ISNULL(p.VerReportes, 0)             AS VerReportes,
+                        ISNULL(p.VerBitacora, 0)             AS VerBitacora,
+                        ISNULL(p.ModificarActivos, 0)        AS ModificarActivos,
+                        ISNULL(p.ModificarMantenimientos, 0) AS ModificarMantenimientos,
+                        ISNULL(p.ModificarEquipos, 0)        AS ModificarEquipos,
+                        ISNULL(p.ModificarDepartamentos, 0)  AS ModificarDepartamentos,
+                        ISNULL(p.ModificarEmpleados, 0)      AS ModificarEmpleados,
+                        ISNULL(p.ModificarUsuarios, 0)       AS ModificarUsuarios,
+                        ISNULL(p.AccesoTotal, 0)             AS AccesoTotal
+                    FROM dbo.Usuarios u
+                    LEFT JOIN dbo.PermisosUsuarios p
+                           ON u.id_usuario = p.id_usuario
                     ORDER BY u.Username";
 
                 var command = new SqlCommand(query, connection);
@@ -46,13 +61,20 @@ namespace InventarioComputo.Pages
                     {
                         ListaPermisos.Add(new UsuarioPermisosViewModel
                         {
-                            IdUsuario = reader.GetInt32(0),
-                            Username = reader.GetString(1),
-                            VerInformes = reader.GetBoolean(2),
-                            ModificarActivos = reader.GetBoolean(3),
-                            ModificarUsuarios = reader.GetBoolean(4),
-                            RealizarMantenimientos = reader.GetBoolean(5),
-                            AccesoTotal = reader.GetBoolean(6)
+                            IdUsuario = reader.GetInt32(reader.GetOrdinal("id_usuario")),
+                            Username = reader.GetString(reader.GetOrdinal("Username")),
+                            VerEmpleados = reader.GetBoolean(reader.GetOrdinal("VerEmpleados")),
+                            VerUsuarios = reader.GetBoolean(reader.GetOrdinal("VerUsuarios")),
+                            VerConexionBDD = reader.GetBoolean(reader.GetOrdinal("VerConexionBDD")),
+                            VerReportes = reader.GetBoolean(reader.GetOrdinal("VerReportes")),
+                            VerBitacora = reader.GetBoolean(reader.GetOrdinal("VerBitacora")),
+                            ModificarActivos = reader.GetBoolean(reader.GetOrdinal("ModificarActivos")),
+                            ModificarMantenimientos = reader.GetBoolean(reader.GetOrdinal("ModificarMantenimientos")),
+                            ModificarEquipos = reader.GetBoolean(reader.GetOrdinal("ModificarEquipos")),
+                            ModificarDepartamentos = reader.GetBoolean(reader.GetOrdinal("ModificarDepartamentos")),
+                            ModificarEmpleados = reader.GetBoolean(reader.GetOrdinal("ModificarEmpleados")),
+                            ModificarUsuarios = reader.GetBoolean(reader.GetOrdinal("ModificarUsuarios")),
+                            AccesoTotal = reader.GetBoolean(reader.GetOrdinal("AccesoTotal"))
                         });
                     }
                 }
@@ -66,21 +88,53 @@ namespace InventarioComputo.Pages
             {
                 try
                 {
-                    var actuales = new Dictionary<int, (bool VerInformes, bool ModificarActivos, bool ModificarUsuarios, bool RealizarMantenimientos, bool AccesoTotal)>();
+                    // Cargar estado actual para detectar cambios mínimos
+                    var actuales = new Dictionary<int, (bool VerEmpleados, bool VerUsuarios, bool VerConexionBDD, bool VerReportes, bool VerBitacora,
+                                                        bool ModificarActivos, bool ModificarMantenimientos, bool ModificarEquipos,
+                                                        bool ModificarDepartamentos, bool ModificarEmpleados, bool ModificarUsuarios,
+                                                        bool AccesoTotal)>();
+
                     var qActuales = @"
-                        SELECT id_usuario, VerInformes, ModificarActivos, ModificarUsuarios, RealizarMantenimientos, AccesoTotal
-                        FROM PermisosUsuarios";
+    SELECT id_usuario,
+           ISNULL(VerEmpleados,0)            AS VerEmpleados,
+           ISNULL(VerUsuarios,0)             AS VerUsuarios,
+           ISNULL(VerConexionBDD,0)          AS VerConexionBDD,
+           ISNULL(VerReportes,0)             AS VerReportes,
+           ISNULL(VerBitacora,0)             AS VerBitacora,
+           ISNULL(ModificarActivos,0)        AS ModificarActivos,
+           ISNULL(ModificarMantenimientos,0) AS ModificarMantenimientos,
+           ISNULL(ModificarEquipos,0)        AS ModificarEquipos,
+           ISNULL(ModificarDepartamentos,0)  AS ModificarDepartamentos,
+           ISNULL(ModificarEmpleados,0)      AS ModificarEmpleados,
+           ISNULL(ModificarUsuarios,0)       AS ModificarUsuarios,
+           ISNULL(AccesoTotal,0)             AS AccesoTotal
+    FROM dbo.PermisosUsuarios";
+
                     using (var cmdAct = new SqlCommand(qActuales, connection, transaction))
                     using (var rd = await cmdAct.ExecuteReaderAsync())
                     {
+                        // helper local
+                        bool B(string name)
+                        {
+                            var i = rd.GetOrdinal(name);
+                            return !rd.IsDBNull(i) && rd.GetBoolean(i);
+                        }
+
                         while (await rd.ReadAsync())
                         {
-                            actuales[rd.GetInt32(0)] = (
-                                rd.GetBoolean(1),
-                                rd.GetBoolean(2),
-                                rd.GetBoolean(3),
-                                rd.GetBoolean(4),
-                                rd.GetBoolean(5)
+                            actuales[rd.GetInt32(rd.GetOrdinal("id_usuario"))] = (
+                                B("VerEmpleados"),
+                                B("VerUsuarios"),
+                                B("VerConexionBDD"),
+                                B("VerReportes"),
+                                B("VerBitacora"),
+                                B("ModificarActivos"),
+                                B("ModificarMantenimientos"),
+                                B("ModificarEquipos"),
+                                B("ModificarDepartamentos"),
+                                B("ModificarEmpleados"),
+                                B("ModificarUsuarios"),
+                                B("AccesoTotal")
                             );
                         }
                     }
@@ -89,15 +143,36 @@ namespace InventarioComputo.Pages
 
                     foreach (var usuario in ListaPermisos)
                     {
+                        // Regla server-side: AccesoTotal fuerza todo lo demás a true
+                        var verEmpleados = usuario.AccesoTotal || usuario.VerEmpleados;
+                        var verUsuarios = usuario.AccesoTotal || usuario.VerUsuarios;
+                        var verConexionBDD = usuario.AccesoTotal || usuario.VerConexionBDD;
+                        var verReportes = usuario.AccesoTotal || usuario.VerReportes;
+                        var verBitacora = usuario.AccesoTotal || usuario.VerBitacora;
+                        var modificarActivos = usuario.AccesoTotal || usuario.ModificarActivos;
+                        var modificarMantenimientos = usuario.AccesoTotal || usuario.ModificarMantenimientos;
+                        var modificarEquipos = usuario.AccesoTotal || usuario.ModificarEquipos;
+                        var modificarDepartamentos = usuario.AccesoTotal || usuario.ModificarDepartamentos;
+                        var modificarEmpleados = usuario.AccesoTotal || usuario.ModificarEmpleados;
+                        var modificarUsuarios = usuario.AccesoTotal || usuario.ModificarUsuarios;
+                        var accesoTotal = usuario.AccesoTotal;
+
                         bool huboCambio;
                         if (actuales.TryGetValue(usuario.IdUsuario, out var prev))
                         {
                             huboCambio =
-                                prev.VerInformes != usuario.VerInformes ||
-                                prev.ModificarActivos != usuario.ModificarActivos ||
-                                prev.ModificarUsuarios != usuario.ModificarUsuarios ||
-                                prev.RealizarMantenimientos != usuario.RealizarMantenimientos ||
-                                prev.AccesoTotal != usuario.AccesoTotal;
+                                prev.VerEmpleados != verEmpleados ||
+                                prev.VerUsuarios != verUsuarios ||
+                                prev.VerConexionBDD != verConexionBDD ||
+                                prev.VerReportes != verReportes ||
+                                prev.VerBitacora != verBitacora ||
+                                prev.ModificarActivos != modificarActivos ||
+                                prev.ModificarMantenimientos != modificarMantenimientos ||
+                                prev.ModificarEquipos != modificarEquipos ||
+                                prev.ModificarDepartamentos != modificarDepartamentos ||
+                                prev.ModificarEmpleados != modificarEmpleados ||
+                                prev.ModificarUsuarios != modificarUsuarios ||
+                                prev.AccesoTotal != accesoTotal;
                         }
                         else
                         {
@@ -105,35 +180,60 @@ namespace InventarioComputo.Pages
                         }
 
                         var query = @"
-                            MERGE PermisosUsuarios AS target
+                            MERGE dbo.PermisosUsuarios AS target
                             USING (SELECT @IdUsuario AS id_usuario) AS source
-                            ON (target.id_usuario = source.id_usuario)
+                              ON (target.id_usuario = source.id_usuario)
                             WHEN MATCHED THEN
-                                UPDATE SET VerInformes = @VerInformes, ModificarActivos = @ModificarActivos,
-                                           ModificarUsuarios = @ModificarUsuarios, RealizarMantenimientos = @RealizarMantenimientos,
-                                           AccesoTotal = @AccesoTotal
+                                UPDATE SET
+                                   VerEmpleados            = @VerEmpleados,
+                                   VerUsuarios             = @VerUsuarios,
+                                   VerConexionBDD          = @VerConexionBDD,
+                                   VerReportes             = @VerReportes,
+                                   VerBitacora             = @VerBitacora,
+                                   ModificarActivos        = @ModificarActivos,
+                                   ModificarMantenimientos = @ModificarMantenimientos,
+                                   ModificarEquipos        = @ModificarEquipos,
+                                   ModificarDepartamentos  = @ModificarDepartamentos,
+                                   ModificarEmpleados      = @ModificarEmpleados,
+                                   ModificarUsuarios       = @ModificarUsuarios,
+                                   AccesoTotal             = @AccesoTotal
                             WHEN NOT MATCHED THEN
-                                INSERT (id_usuario, VerInformes, ModificarActivos, ModificarUsuarios, RealizarMantenimientos, AccesoTotal)
-                                VALUES (@IdUsuario, @VerInformes, @ModificarActivos, @ModificarUsuarios, @RealizarMantenimientos, @AccesoTotal);";
+                                INSERT (id_usuario, VerEmpleados, VerUsuarios, VerConexionBDD, VerReportes,VerBitacora,
+                                        ModificarActivos, ModificarMantenimientos, ModificarEquipos, ModificarDepartamentos,
+                                        ModificarEmpleados, ModificarUsuarios, AccesoTotal)
+                                VALUES (@IdUsuario, @VerEmpleados, @VerUsuarios, @VerConexionBDD, @VerReportes, @VerBitacora,
+                                        @ModificarActivos, @ModificarMantenimientos, @ModificarEquipos, @ModificarDepartamentos,
+                                        @ModificarEmpleados, @ModificarUsuarios, @AccesoTotal);";
 
                         var command = new SqlCommand(query, connection, transaction);
                         command.Parameters.AddWithValue("@IdUsuario", usuario.IdUsuario);
-                        command.Parameters.AddWithValue("@VerInformes", usuario.VerInformes);
-                        command.Parameters.AddWithValue("@ModificarActivos", usuario.ModificarActivos);
-                        command.Parameters.AddWithValue("@ModificarUsuarios", usuario.ModificarUsuarios);
-                        command.Parameters.AddWithValue("@RealizarMantenimientos", usuario.RealizarMantenimientos);
-                        command.Parameters.AddWithValue("@AccesoTotal", usuario.AccesoTotal);
+                        command.Parameters.AddWithValue("@VerEmpleados", verEmpleados);
+                        command.Parameters.AddWithValue("@VerUsuarios", verUsuarios);
+                        command.Parameters.AddWithValue("@VerConexionBDD", verConexionBDD);
+                        command.Parameters.AddWithValue("@VerReportes", verReportes);
+                        command.Parameters.AddWithValue("@VerBitacora", verBitacora);
+                        command.Parameters.AddWithValue("@ModificarActivos", modificarActivos);
+                        command.Parameters.AddWithValue("@ModificarMantenimientos", modificarMantenimientos);
+                        command.Parameters.AddWithValue("@ModificarEquipos", modificarEquipos);
+                        command.Parameters.AddWithValue("@ModificarDepartamentos", modificarDepartamentos);
+                        command.Parameters.AddWithValue("@ModificarEmpleados", modificarEmpleados);
+                        command.Parameters.AddWithValue("@ModificarUsuarios", modificarUsuarios);
+                        command.Parameters.AddWithValue("@AccesoTotal", accesoTotal);
 
                         await command.ExecuteNonQueryAsync();
 
-                        if (huboCambio) cambios++;
+                        if (huboCambio)
+                        {
+                            cambios++;
+                            _permisosService.Invalidate(usuario.IdUsuario); // limpiar caché
+                        }
                     }
 
                     await transaction.CommitAsync();
 
                     try
                     {
-                        var detalles = $"Se actualizaron los permisos para {cambios} usuarios.";
+                        var detalles = $"Se actualizaron los permisos para {cambios} usuario(s).";
                         await BitacoraHelper.RegistrarAccionAsync(
                             _dbConnection,
                             _logger,
@@ -164,11 +264,24 @@ namespace InventarioComputo.Pages
         public class UsuarioPermisosViewModel
         {
             public int IdUsuario { get; set; }
-            public string Username { get; set; }
-            public bool VerInformes { get; set; }
+            public string Username { get; set; } = string.Empty;
+
+            // Ver / Lectura
+            public bool VerEmpleados { get; set; }
+            public bool VerUsuarios { get; set; }
+            public bool VerConexionBDD { get; set; }
+            public bool VerReportes { get; set; }
+            public bool VerBitacora { get; set; }
+
+            // Modificar / Escritura
             public bool ModificarActivos { get; set; }
+            public bool ModificarMantenimientos { get; set; }
+            public bool ModificarEquipos { get; set; }
+            public bool ModificarDepartamentos { get; set; }
+            public bool ModificarEmpleados { get; set; }
             public bool ModificarUsuarios { get; set; }
-            public bool RealizarMantenimientos { get; set; }
+
+            // Raíz
             public bool AccesoTotal { get; set; }
         }
     }

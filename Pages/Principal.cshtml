@@ -2,8 +2,10 @@
 @model PrincipalModel
 @{
     ViewData["Title"] = "Dashboard Principal";
-    Layout = "_LayoutGeneral"; 
+    Layout = "_LayoutGeneral";
 }
+@using InventarioComputo.Security
+@inject PermisosService Perms
 
 <div class="dashboard-container">
     <div class="dashboard-bienvenida">
@@ -49,7 +51,8 @@
                     </div>
                 </a>
 
-                @if (Model.RolUsuario == "Administrador")
+                @* Empleados / Usuarios: visibles solo si tiene permisos de VER *@
+                @if (await Perms.TieneAsync(User, PermisosConstantes.VerEmpleados))
                 {
                     <a href="/Empleados" class="module-btn">
                         <i class="fas fa-users"></i>
@@ -58,7 +61,10 @@
                             <p>@Model.TotalEmpleados Registrados</p>
                         </div>
                     </a>
+                }
 
+                @if (await Perms.TieneAsync(User, PermisosConstantes.VerUsuarios))
+                {
                     <a href="/Usuarios" class="module-btn">
                         <i class="fas fa-user-shield"></i>
                         <div class="module-btn-text">
@@ -71,31 +77,48 @@
         </div>
 
         <div class="col-lg-8 col-md-7">
-
             <div class="quick-access">
                 <h3 class="beige-text">Accesos Rápidos</h3>
                 <div class="quick-links">
-                    @if (Model.RolUsuario == "Técnico" || Model.RolUsuario == "Administrador")
+                    @* Crear nuevo Activo: requiere ModificarActivos *@
+                    @if (await Perms.TieneAsync(User, PermisosConstantes.ModificarActivos))
                     {
                         <a href="/Inventario/Formulario" class="quick-link beige-dark">
                             <i class="fas fa-plus"></i>
                             <span>Nuevo Activo</span>
                         </a>
+                    }
+
+                    @* Asignar Equipo: lo atamos a ModificarEquipos *@
+                    @if (await Perms.TieneAsync(User, PermisosConstantes.ModificarEquipos))
+                    {
                         <a href="/Asignaciones" class="quick-link beige-dark">
                             <i class="fas fa-user-tie"></i>
                             <span>Asignar Equipo</span>
                         </a>
                     }
-                    <a href="/Reportes" class="quick-link beige-dark">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Generar Reporte</span>
-                    </a>
-                    @if (Model.RolUsuario == "Administrador")
+
+                    @* Reportes: visible si puede VER reportes *@
+                    @if (await Perms.TieneAsync(User, PermisosConstantes.VerReportes))
+                    {
+                        <a href="/Reportes" class="quick-link beige-dark">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Generar Reporte</span>
+                        </a>
+                    }
+
+                    @* Nuevo Usuario: requiere ModificarUsuarios *@
+                    @if (await Perms.TieneAsync(User, PermisosConstantes.ModificarUsuarios))
                     {
                         <a href="/Usuarios/FormularioUsuario" class="quick-link beige-dark">
                             <i class="fas fa-user-plus"></i>
                             <span>Nuevo Usuario</span>
                         </a>
+                    }
+
+                    @* Bitácora: visible si tiene permiso de VER Bitácora *@
+                    @if (await Perms.TieneAsync(User, PermisosConstantes.VerBitacora))
+                    {
                         <a href="/Bitacora" class="quick-link beige-dark">
                             <i class="fas fa-book"></i>
                             <span>Bitácora</span>

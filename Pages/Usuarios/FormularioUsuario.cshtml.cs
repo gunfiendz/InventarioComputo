@@ -9,6 +9,7 @@ using System;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using InventarioComputo.Data;
+using InventarioComputo.Security; // <- para invalidar caché (opcional)
 
 namespace InventarioComputo.Pages.Usuarios
 {
@@ -16,6 +17,7 @@ namespace InventarioComputo.Pages.Usuarios
     {
         private readonly ConexionBDD _dbConnection;
         private readonly ILogger<FormularioUsuarioModel> _logger;
+        private readonly PermisosService _permisosService; // <- opcional pero útil
 
         [BindProperty]
         public UsuarioViewModel Usuario { get; set; } = new UsuarioViewModel();
@@ -23,10 +25,15 @@ namespace InventarioComputo.Pages.Usuarios
         public List<RolInfo> Roles { get; set; } = new List<RolInfo>();
         public string Modo { get; set; } = "Crear"; // "Crear", "Editar" o "Ver"
 
-        public FormularioUsuarioModel(ConexionBDD dbConnection, ILogger<FormularioUsuarioModel> logger)
+        public FormularioUsuarioModel(
+            ConexionBDD dbConnection,
+            ILogger<FormularioUsuarioModel> logger,
+            PermisosService permisosService // <- inyéctalo
+        )
         {
             _dbConnection = dbConnection;
             _logger = logger;
+            _permisosService = permisosService;
         }
 
         public async Task<IActionResult> OnGetAsync(string handler, int? id)
@@ -100,13 +107,9 @@ namespace InventarioComputo.Pages.Usuarios
             {
                 // Cargar empleados (solo los que no tienen usuario en modo Crear)
                 if (esModoLectura || Modo == "Editar")
-                {
                     Empleados = await ObtenerTodosEmpleados();
-                }
                 else
-                {
                     Empleados = await ObtenerEmpleadosSinUsuario();
-                }
 
                 Roles = await ObtenerRoles();
             }
@@ -260,18 +263,12 @@ namespace InventarioComputo.Pages.Usuarios
             if (Usuario.Id == 0)
             {
                 if (string.IsNullOrEmpty(Usuario.Password))
-                {
                     ModelState.AddModelError("Usuario.Password", "La contraseña es requerida");
-                }
 
                 if (string.IsNullOrEmpty(Usuario.ConfirmPassword))
-                {
                     ModelState.AddModelError("Usuario.ConfirmPassword", "Confirme la contraseña");
-                }
                 else if (Usuario.Password != Usuario.ConfirmPassword)
-                {
                     ModelState.AddModelError("Usuario.ConfirmPassword", "Las contraseñas no coinciden");
-                }
             }
 
             if (!ModelState.IsValid)
@@ -285,10 +282,11 @@ namespace InventarioComputo.Pages.Usuarios
             try
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
+                await using (var tx = connection.BeginTransaction())
                 {
                     string query;
 
-                    if (Usuario.Id == 0) // Crear nuevo
+                    if (esCreacion)
                     {
                         query = @"
                             INSERT INTO Usuarios (
@@ -306,7 +304,7 @@ namespace InventarioComputo.Pages.Usuarios
                             );
                             SELECT SCOPE_IDENTITY();";
                     }
-                    else // Actualizar existente
+                    else
                     {
                         query = @"
                             UPDATE Usuarios SET
@@ -315,46 +313,105 @@ namespace InventarioComputo.Pages.Usuarios
                             WHERE id_usuario = @Id";
                     }
 
-                    var command = new SqlCommand(query, connection);
+                    var command = new SqlCommand(query, connection, tx);
                     command.Parameters.AddWithValue("@Username", Usuario.Username);
 
-                    if (Usuario.Id == 0)
-                    {
+                    if (esCreacion)
                         command.Parameters.AddWithValue("@Password", Usuario.Password);
-                    }
 
-                    // Manejo de empleado (puede ser nulo)
                     if (Usuario.IdEmpleado.HasValue)
-                    {
                         command.Parameters.AddWithValue("@IdEmpleado", Usuario.IdEmpleado.Value);
-                    }
                     else
-                    {
                         command.Parameters.AddWithValue("@IdEmpleado", DBNull.Value);
-                    }
 
                     command.Parameters.AddWithValue("@IdRolSistema", Usuario.IdRolSistema);
 
-                    if (Usuario.Id > 0)
-                    {
+                    if (!esCreacion)
                         command.Parameters.AddWithValue("@Id", Usuario.Id);
-                    }
 
                     if (esCreacion)
                     {
                         var newIdObj = await command.ExecuteScalarAsync();
                         Usuario.Id = Convert.ToInt32(newIdObj);
+
+                        // === Asignar permisos según rol (solo en creación) ===
+                        string rolNombre = await ObtenerNombreRolAsync(connection, tx, Usuario.IdRolSistema);
+
+                        // Calcula bits según el rol
+                        var bits = CalcularPermisosPorRol(rolNombre);
+
+                        // MERGE a PermisosUsuarios
+                        var qPerm = @"
+MERGE dbo.PermisosUsuarios AS target
+USING (SELECT @IdUsuario AS id_usuario) AS source
+  ON target.id_usuario = source.id_usuario
+WHEN MATCHED THEN
+    UPDATE SET
+       VerEmpleados            = @VerEmpleados,
+        VerUsuarios            = @VerUsuarios,
+        VerConexionBDD         = @VerConexionBDD,
+        VerReportes            = @VerReportes,
+        ModificarActivos       = @ModificarActivos,
+        ModificarMantenimientos= @ModificarMantenimientos,
+        ModificarEquipos       = @ModificarEquipos,
+        ModificarDepartamentos = @ModificarDepartamentos,
+        ModificarEmpleados     = @ModificarEmpleados,
+        ModificarUsuarios      = @ModificarUsuarios,
+        AccesoTotal            = @AccesoTotal
+WHEN NOT MATCHED THEN
+    INSERT (id_usuario, VerEmpleados, VerUsuarios, VerConexionBDD, VerReportes,
+            ModificarActivos, ModificarMantenimientos, ModificarEquipos, ModificarDepartamentos,
+            ModificarEmpleados, ModificarUsuarios, AccesoTotal)
+    VALUES (@IdUsuario, @VerEmpleados, @VerUsuarios, @VerConexionBDD, @VerReportes,
+            @ModificarActivos, @ModificarMantenimientos, @ModificarEquipos, @ModificarDepartamentos,
+            @ModificarEmpleados, @ModificarUsuarios, @AccesoTotal);";
+
+                        var cmdPerm = new SqlCommand(qPerm, connection, tx);
+                        cmdPerm.Parameters.AddWithValue("@IdUsuario", Usuario.Id);
+
+                        // Si AccesoTotal = true, forzamos todos los demás a true
+                        bool VerEmpleados = bits.AccesoTotal || bits.VerEmpleados;
+                        bool VerUsuarios = bits.AccesoTotal || bits.VerUsuarios;
+                        bool VerConexionBDD = bits.AccesoTotal || bits.VerConexionBDD;
+                        bool VerReportes = bits.AccesoTotal || bits.VerReportes;
+                        bool ModificarActivos = bits.AccesoTotal || bits.ModificarActivos;
+                        bool ModificarMantenimientos = bits.AccesoTotal || bits.ModificarMantenimientos;
+                        bool ModificarEquipos = bits.AccesoTotal || bits.ModificarEquipos;
+                        bool ModificarDepartamentos = bits.AccesoTotal || bits.ModificarDepartamentos;
+                        bool ModificarEmpleados = bits.AccesoTotal || bits.ModificarEmpleados;
+                        bool ModificarUsuarios = bits.AccesoTotal || bits.ModificarUsuarios;
+
+                        cmdPerm.Parameters.AddWithValue("@VerEmpleados", VerEmpleados);
+                        cmdPerm.Parameters.AddWithValue("@VerUsuarios", VerUsuarios);
+                        cmdPerm.Parameters.AddWithValue("@VerConexionBDD", VerConexionBDD);
+                        cmdPerm.Parameters.AddWithValue("@VerReportes", VerReportes);
+                        cmdPerm.Parameters.AddWithValue("@ModificarActivos", ModificarActivos);
+                        cmdPerm.Parameters.AddWithValue("@ModificarMantenimientos", ModificarMantenimientos);
+                        cmdPerm.Parameters.AddWithValue("@ModificarEquipos", ModificarEquipos);
+                        cmdPerm.Parameters.AddWithValue("@ModificarDepartamentos", ModificarDepartamentos);
+                        cmdPerm.Parameters.AddWithValue("@ModificarEmpleados", ModificarEmpleados);
+                        cmdPerm.Parameters.AddWithValue("@ModificarUsuarios", ModificarUsuarios);
+                        cmdPerm.Parameters.AddWithValue("@AccesoTotal", bits.AccesoTotal);
+
+                        await cmdPerm.ExecuteNonQueryAsync();
+
+                        // invalidar caché por si acaso
+                        _permisosService.Invalidate(Usuario.Id);
                     }
                     else
                     {
+                        // TODO (a futuro): si decides que al cambiar el rol también se reasignen permisos,
+                        // aquí podríamos repetir el bloque de cálculo y MERGE.
                         await command.ExecuteNonQueryAsync();
                     }
+
+                    await tx.CommitAsync();
 
                     // Bitácora crear/modificar
                     try
                     {
                         var detalles = esCreacion
-                            ? $"Se creó el usuario '{Usuario.Username}' (ID: {Usuario.Id})."
+                            ? $"Se creó el usuario '{Usuario.Username}' (ID: {Usuario.Id}) con permisos por rol."
                             : $"Se modificó el usuario '{Usuario.Username}' (ID: {Usuario.Id}).";
 
                         await BitacoraHelper.RegistrarAccionAsync(
@@ -382,6 +439,64 @@ namespace InventarioComputo.Pages.Usuarios
                 await CargarDatosIniciales(false);
                 return Page();
             }
+        }
+
+        private async Task<string> ObtenerNombreRolAsync(SqlConnection connection, SqlTransaction tx, int idRol)
+        {
+            using var cmd = new SqlCommand("SELECT NombreRol FROM RolesSistema WHERE id_rol_sistema = @Id", connection, tx);
+            cmd.Parameters.AddWithValue("@Id", idRol);
+            var res = await cmd.ExecuteScalarAsync();
+            return res?.ToString()?.Trim() ?? string.Empty;
+        }
+
+        private (bool VerEmpleados, bool VerUsuarios, bool VerConexionBDD, bool VerReportes,
+                 bool ModificarActivos, bool ModificarMantenimientos, bool ModificarEquipos, bool ModificarDepartamentos,
+                 bool ModificarEmpleados, bool ModificarUsuarios, bool AccesoTotal)
+            CalcularPermisosPorRol(string nombreRol)
+        {
+            // Normalizamos el nombre para comparar
+            var rol = (nombreRol ?? string.Empty).Trim().ToLowerInvariant();
+
+            // Defaults
+            bool VerEmpleados = false, VerUsuarios = false, VerConexionBDD = false, VerReportes = false;
+            bool ModificarActivos = false, ModificarMantenimientos = false, ModificarEquipos = false, ModificarDepartamentos = false;
+            bool ModificarEmpleados = false, ModificarUsuarios = false, AccesoTotal = false;
+
+            switch (rol)
+            {
+                case "administrador":
+                    AccesoTotal = true; // forzará todo a true al guardar
+                    break;
+
+                case "técnico":
+                case "tecnico": // por si no hay tilde en la BD
+                    VerEmpleados = true;
+                    VerUsuarios = true;
+                    VerReportes = true;
+                    ModificarActivos = true;
+                    ModificarMantenimientos = true;
+                    ModificarEquipos = true;
+                    ModificarDepartamentos = true;
+                    break;
+
+                case "usuario":
+                    VerReportes = true;
+                    ModificarActivos = true;
+                    ModificarMantenimientos = true;
+                    break;
+
+                case "auditor":
+                    VerReportes = true;
+                    break;
+
+                default:
+                    // Rol desconocido: sin permisos por defecto
+                    break;
+            }
+
+            return (VerEmpleados, VerUsuarios, VerConexionBDD, VerReportes,
+                    ModificarActivos, ModificarMantenimientos, ModificarEquipos, ModificarDepartamentos,
+                    ModificarEmpleados, ModificarUsuarios, AccesoTotal);
         }
 
         public class UsuarioViewModel
