@@ -54,7 +54,8 @@ namespace InventarioComputo.Pages.Usuarios
             {
                 {"Username", "u.Username"},
                 {"Empleado", "e.Nombre"},
-                {"Rol", "rs.NombreRol"}
+                {"Rol", "rs.NombreRol"},
+                {"UltimoAcceso", "u.UltimoAcceso"} 
             };
 
             if (!columnasValidas.ContainsKey(SortColumn))
@@ -133,6 +134,7 @@ namespace InventarioComputo.Pages.Usuarios
                     u.Username, 
                     e.Nombre, 
                     rs.NombreRol,
+                    u.UltimoAcceso,
                     COUNT(*) OVER() AS TotalRegistros
                 FROM Usuarios u
                 LEFT JOIN Empleados e ON u.id_empleado = e.id_empleado
@@ -153,19 +155,27 @@ namespace InventarioComputo.Pages.Usuarios
 
             using (var reader = await command.ExecuteReaderAsync())
             {
+                int ordId = reader.GetOrdinal("id_usuario");
+                int ordUser = reader.GetOrdinal("Username");
+                int ordNombre = reader.GetOrdinal("Nombre");
+                int ordRol = reader.GetOrdinal("NombreRol");
+                int ordUlt = reader.GetOrdinal("UltimoAcceso");
+                int ordTotal = reader.GetOrdinal("TotalRegistros");
+
                 while (await reader.ReadAsync())
                 {
                     var usuario = new UsuarioViewModel
                     {
-                        Id = reader.GetInt32(0),
-                        NombreUsuario = reader.GetString(1),
-                        NombreEmpleado = reader.IsDBNull(2) ? "No asignado" : reader.GetString(2),
-                        Rol = reader.GetString(3)
+                        Id = reader.GetInt32(ordId),
+                        NombreUsuario = reader.GetString(ordUser),
+                        NombreEmpleado = reader.IsDBNull(ordNombre) ? "No asignado" : reader.GetString(ordNombre),
+                        Rol = reader.GetString(ordRol),
+                        UltimoAcceso = reader.IsDBNull(ordUlt) ? (DateTime?)null : reader.GetDateTime(ordUlt)
                     };
 
-                    if (!reader.IsDBNull(4))
+                    if (!reader.IsDBNull(ordTotal))
                     {
-                        TotalPaginas = (int)Math.Ceiling((double)reader.GetInt32(4) / RegistrosPorPagina);
+                        TotalPaginas = (int)Math.Ceiling(reader.GetInt32(ordTotal) / (double)RegistrosPorPagina);
                     }
 
                     Usuarios.Add(usuario);
@@ -173,8 +183,28 @@ namespace InventarioComputo.Pages.Usuarios
             }
         }
 
+        private int? ObtenerUsuarioActual()
+        {
+            var idClaim = User.FindFirst("id_usuario") ?? User.FindFirst(ClaimTypes.NameIdentifier);
+            if (idClaim == null) return null;
+
+            if (int.TryParse(idClaim.Value, out var id))
+                return id;
+
+            return null;
+        }
+
+
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
+
+            var currentUserId = ObtenerUsuarioActual();
+            if (currentUserId.HasValue && id == currentUserId.Value)
+            {
+                TempData["Error"] = "No puedes eliminar tu propio usuario.";
+                _logger.LogWarning("Intento de auto-eliminación bloqueado. UsuarioId={Id}", id);
+                return RedirectToPage();
+            }
             try
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
@@ -227,6 +257,9 @@ namespace InventarioComputo.Pages.Usuarios
             public string NombreUsuario { get; set; }
             public string NombreEmpleado { get; set; }
             public string Rol { get; set; }
+
+            public DateTime? UltimoAcceso { get; set; }
+
         }
 
         public class Empleado

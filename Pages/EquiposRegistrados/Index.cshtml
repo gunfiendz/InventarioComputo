@@ -5,19 +5,30 @@
     Layout = "_LayoutGeneral";
 }
 
+@using InventarioComputo.Security
+@inject PermisosService Perms
+
+@{
+    var canModEquipos = await Perms.TieneAsync(User, PermisosConstantes.ModificarEquipos);
+    var hasRoot = await Perms.TieneAsync(User, PermisosConstantes.AccesoTotal);
+}
+
 <div class="inventario-container">
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-laptop"></i> @ViewData["Title"]</h1>
-        <a asp-page="EquiposForm" asp-route-handler="Crear" class="btn btn-beige">
-            <i class="fas fa-plus"></i> Nuevo Perfil
-        </a>
+        @if (canModEquipos)
+        {
+            <a asp-page="EquiposForm" asp-route-handler="Crear" class="btn btn-beige">
+                <i class="fas fa-plus"></i> Nuevo Perfil
+            </a>
+        }
     </div>
 
-    <div class="filtros-container beige-bg">
+    <form method="get" class="filtros-container beige-bg">
         <div class="filtros-group">
             <div class="filtro-item">
                 <label class="form-label beige-text">Tipo de Equipo:</label>
-                <select id="filtro-tipo" class="form-select input-beige">
+                <select id="filtro-tipo" name="tipo" class="form-select input-beige">
                     <option value="">Todos</option>
                     @foreach (var tipo in Model.TiposEquipo)
                     {
@@ -28,7 +39,7 @@
 
             <div class="filtro-item">
                 <label class="form-label beige-text">Marca:</label>
-                <select id="filtro-marca" class="form-select input-beige">
+                <select id="filtro-marca" name="marca" class="form-select input-beige">
                     <option value="">Todas</option>
                     @foreach (var marca in Model.Marcas)
                     {
@@ -39,14 +50,20 @@
 
             <div class="filtro-item">
                 <label class="form-label beige-text">Buscar:</label>
-                <input type="text" id="filtro-busqueda" class="form-control input-beige"
+                <input type="text" id="filtro-busqueda" name="busqueda" class="form-control input-beige"
                        placeholder="Modelo, características..." value="@Model.BusquedaFilter">
             </div>
         </div>
-        <button id="btn-aplicar-filtros" class="btn btn-beige-sm">
-            <i class="fas fa-filter"></i> Aplicar Filtros
-        </button>
-    </div>
+
+        <input type="hidden" name="sortColumn" value="@Model.SortColumn" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+        <input type="hidden" name="pagina" value="1" />
+
+        <div class="d-flex justify-content-end mt-2">
+            <a href="/EquiposRegistrados/Index" class="btn btn-cancelar me-2">Limpiar</a>
+            <button type="submit" class="btn btn-beige-sm"><i class="fas fa-filter"></i> Aplicar Filtros</button>
+        </div>
+    </form>
 
     <div class="table-responsive">
         <table class="table table-hover table-beige sortable-table">
@@ -65,10 +82,10 @@
                             }
                         </a>
                     </th>
-                    <th data-sort-column="Modelo">
+                    <th data-sort-column="Marca">
                         <a href="#" class="sort-link">
-                            Modelo
-                            @if (Model.SortColumn == "Modelo")
+                            Marca
+                            @if (Model.SortColumn == "Marca")
                             {
                                 <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
                             }
@@ -78,10 +95,10 @@
                             }
                         </a>
                     </th>
-                    <th data-sort-column="Marca">
+                    <th data-sort-column="Modelo">
                         <a href="#" class="sort-link">
-                            Marca
-                            @if (Model.SortColumn == "Marca")
+                            Modelo
+                            @if (Model.SortColumn == "Modelo")
                             {
                                 <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
                             }
@@ -113,8 +130,8 @@
                 {
                     <tr>
                         <td>@modelo.NombrePerfil</td>
-                        <td>@modelo.NombreModelo</td>
                         <td>@modelo.Marca</td>
+                        <td>@modelo.NombreModelo</td>
                         <td>@modelo.Tipo</td>
                         <td>
                             <ul class="lista-caracteristicas">
@@ -125,15 +142,28 @@
                             </ul>
                         </td>
                         <td class="acciones">
-                            <a href="/EquiposRegistrados/EquiposForm/Editar/@modelo.Id" class="btn btn-action" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <button class="btn btn-action btn-eliminar"
-                                    data-id="@modelo.Id"
-                                    data-perfil="@modelo.NombrePerfil"
-                                    title="Eliminar">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            @if (canModEquipos)
+                            {
+                                <a href="/EquiposRegistrados/EquiposForm/Editar/@modelo.Id" class="btn btn-action" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="/EquiposRegistrados/EquiposForm/Ver/@modelo.Id" class="btn btn-action" title="Ver">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            }
+
+                            @if (hasRoot)
+                            {
+                                <button class="btn btn-action btn-eliminar"
+                                        data-id="@modelo.Id"
+                                        data-perfil="@modelo.NombrePerfil"
+                                        title="Eliminar">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            }
                         </td>
                     </tr>
                 }
@@ -201,59 +231,50 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Lógica para el ordenamiento de las tablas (si no está en otro archivo)
-        document.querySelectorAll('.sort-link').forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                const column = this.closest('th').dataset.sortColumn;
-                const url = new URL(window.location.href);
-                const currentOrder = url.searchParams.get('sortDirection') || 'DESC';
-                const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+        document.addEventListener('DOMContentLoaded', function () {
+            // Ordenamiento: usa el FORM GET (ajusta hidden inputs y envía)
+            const filtrosForm = document.querySelector('form.filtros-container');
+            document.querySelectorAll('.sort-link').forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const column = this.closest('th').dataset.sortColumn;
 
-                url.searchParams.set('sortColumn', column);
-                url.searchParams.set('sortDirection', newOrder);
-                url.searchParams.set('pagina', '1');
+                    const sortColInput = filtrosForm.querySelector('input[name="sortColumn"]');
+                    const sortDirInput = filtrosForm.querySelector('input[name="sortDirection"]');
+                    const paginaInput = filtrosForm.querySelector('input[name="pagina"]');
 
-                window.location.href = url.toString();
+                    const currentCol = sortColInput.value || 'NombrePerfil';
+                    const currentDir = (sortDirInput.value || 'ASC').toUpperCase();
+                    const newDir = (currentCol === column && currentDir === 'ASC') ? 'DESC' : 'ASC';
+
+                    sortColInput.value = column;
+                    sortDirInput.value = newDir;
+                    paginaInput.value = '1';
+
+                    filtrosForm.submit();
+                });
             });
-        });
 
-        // Lógica para aplicar los filtros
-        document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
-            const tipo = document.getElementById('filtro-tipo').value;
-            const marca = document.getElementById('filtro-marca').value;
-            const busqueda = document.getElementById('filtro-busqueda').value;
-
-            const url = new URL(window.location.href);
-            url.searchParams.set('pagina', '1');
-            url.searchParams.set('sortColumn', '@Model.SortColumn');
-            url.searchParams.set('sortDirection', '@Model.SortDirection');
-            if (tipo) url.searchParams.set('tipo', tipo);
-            if (marca) url.searchParams.set('marca', marca);
-            if (busqueda) url.searchParams.set('busqueda', busqueda);
-
-            window.location.href = url.toString();
-        });
-
-        // Lógica para el botón de Eliminar
-        let idPerfilAEliminar = null;
-        document.querySelectorAll('.btn-eliminar').forEach(btn => {
-            btn.addEventListener('click', function () {
-                idPerfilAEliminar = this.getAttribute('data-id');
-                const nombrePerfil = this.getAttribute('data-perfil');
-                document.getElementById('perfilAEliminar').textContent = nombrePerfil;
-                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
-                modal.show();
+            // Eliminar
+            let idPerfilAEliminar = null;
+            document.querySelectorAll('.btn-eliminar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    idPerfilAEliminar = this.getAttribute('data-id');
+                    const nombrePerfil = this.getAttribute('data-perfil');
+                    document.getElementById('perfilAEliminar').textContent = nombrePerfil;
+                    const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+                    modal.show();
+                });
             });
-        });
 
-        document.getElementById('formEliminar').addEventListener('submit', function (e) {
-            if (idPerfilAEliminar) {
-                this.querySelector('#idPerfilAEliminar').value = idPerfilAEliminar;
-            } else {
-                e.preventDefault();
-                alert('Error: No se ha seleccionado un perfil para eliminar.');
-            }
+            document.getElementById('formEliminar').addEventListener('submit', function (e) {
+                if (idPerfilAEliminar) {
+                    this.querySelector('#idPerfilAEliminar').value = idPerfilAEliminar;
+                } else {
+                    e.preventDefault();
+                    alert('Error: No se ha seleccionado un perfil para eliminar.');
+                }
+            });
         });
     </script>
 }

@@ -18,7 +18,7 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label asp-for="Departamento.Nombre" class="form-label">Nombre del Departamento</label>
-                    <input asp-for="Departamento.Nombre" class="form-control" readonly="@esModoLectura" />
+                    <input asp-for="Departamento.Nombre" data-validate="SoloLetras" class="form-control" readonly="@esModoLectura" />
                     <span asp-validation-for="Departamento.Nombre" class="text-danger"></span>
                 </div>
                 <div class="form-group">
@@ -67,9 +67,8 @@
                 <button type="submit" class="btn btn-beige">Guardar</button>
                 <a asp-page="Index" class="btn btn-cancelar">Cancelar</a>
             }
-            else // Modo "Ver"
+            else 
             {
-                <a asp-page="DepaForm" asp-route-handler="Editar" asp-route-id="@Model.Departamento.Id" class="btn btn-beige">Editar</a>
                 <a asp-page="Index" class="btn btn-cancelar">Volver</a>
             }
         </div>

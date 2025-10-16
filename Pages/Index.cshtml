@@ -26,12 +26,12 @@
             </div>
             <div class="mb-3">
                 <label asp-for="Username" class="form-label beige-text">Usuario:</label>
-                <input asp-for="Username" class="form-control input-beige" maxlength="30" placeholder="Nombre de Usuario" />
+                <input asp-for="Username" data-validate="Usuario" class="form-control input-beige" maxlength="30" placeholder="Nombre de Usuario" />
                 <span asp-validation-for="Username" class="text-danger"></span>
             </div>
             <div class="mb-3 password-container">
                 <label asp-for="Password" class="form-label beige-text">Password:</label>
-                <input asp-for="Password" class="form-control input-beige" type="password" maxlength="30" placeholder="Password" id="txt_contrasena" />
+                <input asp-for="Password" data-validate="Contrasena" class="form-control input-beige" type="password" maxlength="30" placeholder="Password" id="txt_contrasena" />
                 <button type="button" class="reveal-button" onclick="togglePasswordVisibility()">👁️</button>
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
@@ -43,6 +43,7 @@
 </div>
 
 <script>
+
     function togglePasswordVisibility() {
         const passwordInput = document.getElementById("txt_contrasena");
         const revealButton = document.querySelector(".reveal-button");

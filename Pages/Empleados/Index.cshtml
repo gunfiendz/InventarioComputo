@@ -5,19 +5,30 @@
     Layout = "_LayoutGeneral";
 }
 
+@using InventarioComputo.Security
+@inject PermisosService Perms
+
+@{
+    var canModEmpleados = await Perms.TieneAsync(User, PermisosConstantes.ModificarEmpleados);
+    var hasRoot = await Perms.TieneAsync(User, PermisosConstantes.AccesoTotal);
+}
+
 <div class="inventario-container">
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-users"></i> @ViewData["Title"]</h1>
-        <a href="/Empleados/FormularioEmpleado" class="btn btn-beige">
-            <i class="fas fa-plus"></i> Nuevo Empleado
-        </a>
+        @if (canModEmpleados)
+        {
+            <a href="/Empleados/FormularioEmpleado" class="btn btn-beige">
+                <i class="fas fa-plus"></i> Nuevo Empleado
+            </a>
+        }
     </div>
 
-    <div class="filtros-container beige-bg">
+    <form method="get" class="filtros-container beige-bg" id="form-filtros">
         <div class="filtros-group">
             <div class="filtro-item">
                 <label class="form-label beige-text">Departamento:</label>
-                <select id="filtro-departamento" class="form-select input-beige">
+                <select id="filtro-departamento" name="departamento" class="form-select input-beige">
                     <option value="">Todos</option>
                     @foreach (var depto in Model.Departamentos)
                     {
@@ -28,7 +39,7 @@
 
             <div class="filtro-item">
                 <label class="form-label beige-text">Puesto:</label>
-                <select id="filtro-puesto" class="form-select input-beige">
+                <select id="filtro-puesto" name="puesto" class="form-select input-beige">
                     <option value="">Todos</option>
                     @foreach (var puesto in Model.Puestos)
                     {
@@ -39,14 +50,20 @@
 
             <div class="filtro-item">
                 <label class="form-label beige-text">Buscar:</label>
-                <input type="text" id="filtro-busqueda" class="form-control input-beige"
-                       placeholder="Nombre, email..." value="@Model.BusquedaFilter">
+                <input type="text" id="filtro-busqueda" name="busqueda" class="form-control input-beige"
+                       placeholder="Nombre, email..." value="@Model.BusquedaFilter" />
             </div>
         </div>
-        <button id="btn-aplicar-filtros" class="btn btn-beige-sm">
-            <i class="fas fa-filter"></i> Aplicar Filtros
-        </button>
-    </div>
+
+        <input type="hidden" name="sortColumn" value="@Model.SortColumn" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+        <input type="hidden" name="pagina" value="1" />
+
+        <div class="d-flex justify-content-end mt-2">
+            <a href="/Empleados/Index" class="btn btn-cancelar me-2">Limpiar</a>
+            <button type="submit" class="btn btn-beige-sm"><i class="fas fa-filter"></i> Aplicar Filtros</button>
+        </div>
+    </form>
 
     <div class="table-responsive">
         <table class="table table-hover table-beige sortable-table">
@@ -106,15 +123,28 @@
                         <td>@empleado.Email</td>
                         <td>@empleado.Telefono</td>
                         <td class="acciones">
-                            <a asp-page="FormularioEmpleado" asp-route-handler="Editar" asp-route-id="@empleado.Id" class="btn btn-action" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <button class="btn btn-action btn-eliminar"
-                                    data-id="@empleado.Id"
-                                    data-nombre="@empleado.Nombre"
-                                    title="Eliminar">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            @if (canModEmpleados)
+                            {
+                                <a asp-page="FormularioEmpleado" asp-route-handler="Editar" asp-route-id="@empleado.Id" class="btn btn-action" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            }
+                            else
+                            {
+                                <a asp-page="FormularioEmpleado" asp-route-handler="Ver" asp-route-id="@empleado.Id" class="btn btn-action" title="Ver">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            }
+
+                            @if (hasRoot)
+                            {
+                                <button class="btn btn-action btn-eliminar"
+                                        data-id="@empleado.Id"
+                                        data-nombre="@empleado.Nombre"
+                                        title="Eliminar">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            }
                         </td>
                     </tr>
                 }
@@ -169,60 +199,51 @@
 
 @section Scripts {
     <script>
-        // Ordenamiento
-        document.querySelectorAll('.sort-link').forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                const column = this.closest('th').dataset.sortColumn;
-                const currentOrder = '@Model.SortDirection';
-                const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+        document.addEventListener('DOMContentLoaded', function () {
+            const filtrosForm = document.getElementById('form-filtros');
+            document.querySelectorAll('.sort-link').forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const th = this.closest('th');
+                    const column = th ? th.getAttribute('data-sort-column') : null;
+                    if (!filtrosForm || !column) return;
 
-                const url = new URL(window.location.href);
-                url.searchParams.set('sortColumn', column);
-                url.searchParams.set('sortDirection', newOrder);
-                url.searchParams.set('pagina', '1');
+                    const sortColInput = filtrosForm.querySelector('input[name="sortColumn"]');
+                    const sortDirInput = filtrosForm.querySelector('input[name="sortDirection"]');
+                    const paginaInput = filtrosForm.querySelector('input[name="pagina"]');
 
-                window.location.href = url.toString();
+                    const currentCol = sortColInput?.value || 'Nombre';
+                    const currentDir = (sortDirInput?.value || 'ASC').toUpperCase();
+                    const newDir = (currentCol === column && currentDir === 'ASC') ? 'DESC' : 'ASC';
+
+                    if (sortColInput) sortColInput.value = column;
+                    if (sortDirInput) sortDirInput.value = newDir;
+                    if (paginaInput) paginaInput.value = '1';
+
+                    filtrosForm.submit();
+                });
             });
-        });
 
-        // Aplicar filtros
-        document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
-            const departamento = document.getElementById('filtro-departamento').value;
-            const puesto = document.getElementById('filtro-puesto').value;
-            const busqueda = document.getElementById('filtro-busqueda').value;
-
-            const url = new URL(window.location.href);
-            url.searchParams.set('pagina', '1');
-
-            url.searchParams.set('sortColumn', '@Model.SortColumn');
-            url.searchParams.set('sortDirection', '@Model.SortDirection');
-            if (departamento) url.searchParams.set('departamento', departamento);
-            if (puesto) url.searchParams.set('puesto', puesto);
-            if (busqueda) url.searchParams.set('busqueda', busqueda);
-
-            window.location.href = url.toString();
-        });
-
-        // Lógica para el botón de Eliminar
-        let idEmpleadoAEliminar = null;
-        document.querySelectorAll('.btn-eliminar').forEach(btn => {
-            btn.addEventListener('click', function () {
-                idEmpleadoAEliminar = this.getAttribute('data-id');
-                const nombre = this.getAttribute('data-nombre');
-                document.getElementById('nombreEmpleadoEliminar').textContent = nombre;
-                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
-                modal.show();
+            // Eliminar (modal)
+            let idEmpleadoAEliminar = null;
+            document.querySelectorAll('.btn-eliminar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    idEmpleadoAEliminar = this.getAttribute('data-id');
+                    const nombre = this.getAttribute('data-nombre');
+                    document.getElementById('nombreEmpleadoEliminar').textContent = nombre;
+                    const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+                    modal.show();
+                });
             });
-        });
 
-        document.getElementById('formEliminar').addEventListener('submit', function (e) {
-            if (idEmpleadoAEliminar) {
-                this.querySelector('#idEmpleadoAEliminar').value = idEmpleadoAEliminar;
-            } else {
-                e.preventDefault();
-                alert('Error: No se ha seleccionado un empleado para eliminar.');
-            }
+            document.getElementById('formEliminar').addEventListener('submit', function (e) {
+                if (idEmpleadoAEliminar) {
+                    this.querySelector('#idEmpleadoAEliminar').value = idEmpleadoAEliminar;
+                } else {
+                    e.preventDefault();
+                    alert('Error: No se ha seleccionado un empleado para eliminar.');
+                }
+            });
         });
     </script>
 }

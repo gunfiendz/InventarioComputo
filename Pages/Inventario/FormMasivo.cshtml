@@ -7,7 +7,11 @@
 
 <div class="container-form">
     <h1 class="beige-text"><i class="fas fa-layer-group"></i> @ViewData["Title"]</h1>
-    <p class="text-muted">Use este formulario para registrar múltiples activos del mismo perfil de una sola vez. Los números de serie y etiquetas se registrarán como 'PENDIENTE' para ser editados posteriormente desde el listado de inventario.</p>
+    <p class="text-muted">
+        Use este formulario para registrar múltiples activos del mismo perfil de una sola vez.
+        Los números de serie y etiquetas se registrarán como 'PENDIENTE' para ser editados posteriormente
+        desde el listado de inventario.
+    </p>
 
     <form method="post" class="form-beige" asp-antiforgery="true">
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
@@ -16,6 +20,7 @@
             <div class="col-md-6">
                 <h5>1. Seleccione el Perfil del Equipo</h5>
                 <hr />
+
                 <div class="form-group">
                     <label class="form-label">Tipo de Equipo</label>
                     <select asp-for="EquipoMasivo.IdTipoEquipo" class="form-control input-beige" id="tipoEquipo">
@@ -27,6 +32,7 @@
                     </select>
                     <span asp-validation-for="EquipoMasivo.IdTipoEquipo" class="text-danger"></span>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Marca</label>
                     <select asp-for="EquipoMasivo.IdMarca" class="form-control input-beige" id="marca" disabled>
@@ -34,6 +40,7 @@
                     </select>
                     <span asp-validation-for="EquipoMasivo.IdMarca" class="text-danger"></span>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Modelo</label>
                     <select asp-for="EquipoMasivo.IdModelo" class="form-control input-beige" id="modelo" disabled>
@@ -41,6 +48,7 @@
                     </select>
                     <span asp-validation-for="EquipoMasivo.IdModelo" class="text-danger"></span>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Perfil del Modelo</label>
                     <select asp-for="EquipoMasivo.IdPerfil" class="form-control input-beige" id="perfil" disabled>
@@ -51,6 +59,7 @@
 
                 <h5 class="mt-4">2. Ingrese los Datos Comunes</h5>
                 <hr />
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
@@ -59,6 +68,7 @@
                             <span asp-validation-for="EquipoMasivo.Cantidad" class="text-danger"></span>
                         </div>
                     </div>
+
                     <div class="col-md-6">
                         <div class="form-group">
                             <label asp-for="EquipoMasivo.FechaCompra" class="form-label"></label>
@@ -67,9 +77,39 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="form-group">
                     <label asp-for="EquipoMasivo.Garantia" class="form-label"></label>
                     <input asp-for="EquipoMasivo.Garantia" class="form-control" />
+                </div>
+
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="form-group">
+                            <label asp-for="EquipoMasivo.VidaUtilAnios" class="form-label"></label>
+                            <input asp-for="EquipoMasivo.VidaUtilAnios"
+                                   data-validate="SoloNumeros"
+                                   class="form-control input-compact"
+                                   placeholder="Ej. 3" />
+                            <small class="form-text text-muted">Déjelo vacío si no desea registrar vida útil.</small>
+                            <span asp-validation-for="EquipoMasivo.VidaUtilAnios" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-auto">
+                        <div class="form-group">
+                            <label asp-for="EquipoMasivo.Costo" class="form-label"></label>
+                            <div class="input-group input-compact">
+                                <span class="input-group-text">L</span>
+                                <input asp-for="EquipoMasivo.Costo"
+                                       data-validate="SoloNumeros"
+                                       class="form-control"
+                                       inputmode="decimal"
+                                       placeholder="1,234.56 o 1.234,56" />
+                            </div>
+                            <span asp-validation-for="EquipoMasivo.Costo" data-validate="SoloNumeros" class="text-danger"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -88,7 +128,9 @@
                 <div class="card caracteristicas-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6><i class="fas fa-compact-disc"></i> Software Preinstalado</h6>
-                        <button type="button" class="btn btn-sm btn-outline-beige" data-bs-toggle="modal" data-bs-target="#addSoftwareModal" title="Agregar Nuevo Software">
+                        <button type="button" class="btn btn-sm btn-outline-beige"
+                                data-bs-toggle="modal" data-bs-target="#addSoftwareModal"
+                                title="Agregar Nuevo Software">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
@@ -102,7 +144,9 @@
                                     <input type="hidden" asp-for="SoftwareDisponible[i].Nombre" />
                                     <input class="form-check-input software-checkbox" type="checkbox" asp-for="SoftwareDisponible[i].IsSelected" />
                                     <label class="form-check-label" asp-for="SoftwareDisponible[i].IsSelected">@Model.SoftwareDisponible[i].Nombre</label>
-                                    <input type="text" asp-for="SoftwareDisponible[i].ClaveLicencia" class="form-control form-control-sm licencia-input" placeholder="Clave de Licencia (opcional)" style="display: none;" />
+                                    <input type="text" asp-for="SoftwareDisponible[i].ClaveLicencia"
+                                           class="form-control form-control-sm licencia-input"
+                                           placeholder="Clave de Licencia (opcional)" style="display: none;" />
                                 </div>
                             }
                         }
@@ -131,10 +175,24 @@
             </div>
             <div class="modal-body">
                 <div id="modal-software-alert" class="alert alert-danger d-none"></div>
-                <div class="form-group mb-2"><label for="newSoftwareNombre" class="form-label">Nombre</label><input type="text" id="newSoftwareNombre" class="form-control" /></div>
-                <div class="form-group mb-2"><label for="newSoftwareTipo" class="form-label">Tipo de Software</label><select id="newSoftwareTipo" class="form-select" asp-items="Model.TiposSoftware"><option value="">-- Seleccione --</option></select></div>
-                <div class="form-group mb-2"><label for="newSoftwareVersion" class="form-label">Versión (Opcional)</label><input type="text" id="newSoftwareVersion" class="form-control" /></div>
-                <div class="form-group"><label for="newSoftwareProveedor" class="form-label">Proveedor (Opcional)</label><input type="text" id="newSoftwareProveedor" class="form-control" /></div>
+                <div class="form-group mb-2">
+                    <label for="newSoftwareNombre" class="form-label">Nombre</label>
+                    <input type="text" id="newSoftwareNombre" class="form-control" />
+                </div>
+                <div class="form-group mb-2">
+                    <label for="newSoftwareTipo" class="form-label">Tipo de Software</label>
+                    <select id="newSoftwareTipo" class="form-select" asp-items="Model.TiposSoftware">
+                        <option value="">-- Seleccione --</option>
+                    </select>
+                </div>
+                <div class="form-group mb-2">
+                    <label for="newSoftwareVersion" class="form-label">Versión (Opcional)</label>
+                    <input type="text" id="newSoftwareVersion" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="newSoftwareProveedor" class="form-label">Proveedor (Opcional)</label>
+                    <input type="text" id="newSoftwareProveedor" class="form-control" />
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-cancelar" data-bs-dismiss="modal">Cancelar</button>
@@ -143,23 +201,6 @@
         </div>
     </div>
 </div>
-
-@section Styles {
-    <style>
-        .caracteristicas-card .card-body {
-            max-height: 220px;
-            overflow-y: auto;
-        }
-
-        .software-item {
-            margin-bottom: 0.5rem;
-        }
-
-        .licencia-input {
-            margin-top: 0.25rem;
-        }
-    </style>
-}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
@@ -201,7 +242,10 @@
 
             async function cargarMarcas() {
                 if (!tipoSelect.value) {
-                    resetDropdown(marcaSelect, '-- Seleccione tipo --'); resetDropdown(modeloSelect, '-- Seleccione marca --'); resetDropdown(perfilSelect, '-- Seleccione modelo --'); return;
+                    resetDropdown(marcaSelect, '-- Seleccione tipo --');
+                    resetDropdown(modeloSelect, '-- Seleccione marca --');
+                    resetDropdown(perfilSelect, '-- Seleccione modelo --');
+                    return;
                 }
                 resetDropdown(marcaSelect, 'Cargando...');
                 try {
@@ -212,7 +256,9 @@
 
             async function cargarModelos() {
                 if (!marcaSelect.value) {
-                    resetDropdown(modeloSelect, '-- Seleccione marca --'); resetDropdown(perfilSelect, '-- Seleccione modelo --'); return;
+                    resetDropdown(modeloSelect, '-- Seleccione marca --');
+                    resetDropdown(perfilSelect, '-- Seleccione modelo --');
+                    return;
                 }
                 resetDropdown(modeloSelect, 'Cargando...');
                 try {
@@ -223,7 +269,8 @@
 
             async function cargarPerfiles() {
                 if (!modeloSelect.value) {
-                    resetDropdown(perfilSelect, '-- Seleccione modelo --'); return;
+                    resetDropdown(perfilSelect, '-- Seleccione modelo --');
+                    return;
                 }
                 resetDropdown(perfilSelect, 'Cargando...');
                 try {
@@ -234,7 +281,10 @@
 
             async function cargarCaracteristicas(perfilId) {
                 const container = document.getElementById('caracteristicas-container');
-                if (!perfilId) { container.innerHTML = '<p class="text-muted">Seleccione un perfil para ver sus características.</p>'; return; }
+                if (!perfilId) {
+                    container.innerHTML = '<p class="text-muted">Seleccione un perfil para ver sus características.</p>';
+                    return;
+                }
                 container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
                 try {
                     const caracteristicas = await fetchJson(`/Inventario/FormMasivo?handler=CaracteristicasPorPerfil&perfilId=${perfilId}`);
@@ -243,13 +293,18 @@
                         caracteristicas.forEach(car => { html += `<li class="list-group-item"><strong>${car.nombre}:</strong> ${car.valor}</li>`; });
                         html += '</ul>';
                         container.innerHTML = html;
-                    } else { container.innerHTML = '<p class="text-muted">No hay características para este perfil.</p>'; }
-                } catch (e) { container.innerHTML = '<p class="text-danger">Error al cargar características.</p>'; }
+                    } else {
+                        container.innerHTML = '<p class="text-muted">No hay características para este perfil.</p>';
+                    }
+                } catch (e) {
+                    container.innerHTML = '<p class="text-danger">Error al cargar características.</p>';
+                }
             }
 
             function toggleLicenseInput(checkbox) {
                 const licenseInput = checkbox.closest('.software-item').querySelector('.licencia-input');
-                if (checkbox.checked) { licenseInput.style.display = 'block'; } else { licenseInput.style.display = 'none'; licenseInput.value = ''; }
+                if (checkbox.checked) { licenseInput.style.display = 'block'; }
+                else { licenseInput.style.display = 'none'; licenseInput.value = ''; }
             }
             document.querySelectorAll('.software-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', () => toggleLicenseInput(checkbox));
@@ -271,7 +326,14 @@
                 };
 
                 try {
-                    const response = await fetch('/Inventario/FormMasivo?handler=AddSoftware', { method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value }, body: JSON.stringify(body) });
+                    const response = await fetch('/Inventario/FormMasivo?handler=AddSoftware', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify(body)
+                    });
                     const result = await response.json();
 
                     if (result.success) {
@@ -280,21 +342,27 @@
                         if (noSoftwareMsg) noSoftwareMsg.remove();
 
                         const newCheckHtml = `
-                                    <div class="form-check software-item">
-                                        <input type="hidden" name="SoftwareDisponible[${newIndex}].Id" value="${result.id}" />
-                                        <input type="hidden" name="SoftwareDisponible[${newIndex}].Nombre" value="${result.text}" />
-                                        <input class="form-check-input software-checkbox" type="checkbox" name="SoftwareDisponible[${newIndex}].IsSelected" id="SoftwareDisponible_${newIndex}__IsSelected" value="true" checked />
-                                        <label class="form-check-label" for="SoftwareDisponible_${newIndex}__IsSelected">${result.text}</label>
-                                        <input type="text" name="SoftwareDisponible[${newIndex}].ClaveLicencia" class="form-control form-control-sm licencia-input" placeholder="Clave de Licencia (opcional)" style="display: block;" />
-                                    </div>`;
+                            <div class="form-check software-item">
+                                <input type="hidden" name="SoftwareDisponible[${newIndex}].Id" value="${result.id}" />
+                                <input type="hidden" name="SoftwareDisponible[${newIndex}].Nombre" value="${result.text}" />
+                                <input class="form-check-input software-checkbox" type="checkbox" name="SoftwareDisponible[${newIndex}].IsSelected" id="SoftwareDisponible_${newIndex}__IsSelected" value="true" checked />
+                                <label class="form-check-label" for="SoftwareDisponible_${newIndex}__IsSelected">${result.text}</label>
+                                <input type="text" name="SoftwareDisponible[${newIndex}].ClaveLicencia" class="form-control form-control-sm licencia-input" placeholder="Clave de Licencia (opcional)" style="display: block;" />
+                            </div>`;
                         softwareListContainer.insertAdjacentHTML('beforeend', newCheckHtml);
 
                         const newCheckbox = softwareListContainer.querySelector(`input[name="SoftwareDisponible[${newIndex}].IsSelected"]`);
                         newCheckbox.addEventListener('change', () => toggleLicenseInput(newCheckbox));
 
                         bootstrap.Modal.getInstance(softwareModal).hide();
-                    } else { softwareAlert.textContent = result.message || 'Error al guardar.'; softwareAlert.classList.remove('d-none'); }
-                } catch (e) { softwareAlert.textContent = 'Error de conexión.'; softwareAlert.classList.remove('d-none'); }
+                    } else {
+                        softwareAlert.textContent = result.message || 'Error al guardar.';
+                        softwareAlert.classList.remove('d-none');
+                    }
+                } catch (e) {
+                    softwareAlert.textContent = 'Error de conexión.';
+                    softwareAlert.classList.remove('d-none');
+                }
             });
 
             softwareModal.addEventListener('hidden.bs.modal', function () {

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ namespace InventarioComputo.Pages
     public class BitacoraModel : PageModel
     {
         private readonly ConexionBDD _dbConnection;
+        private readonly ILogger<BitacoraModel> _logger;
 
         public List<BitacoraRegistro> Registros { get; set; } = new List<BitacoraRegistro>();
         public List<Modulo> Modulos { get; set; } = new List<Modulo>();
@@ -26,16 +28,26 @@ namespace InventarioComputo.Pages
         public string SortDirection { get; set; } = "DESC";
         public string RolUsuario { get; set; }
 
-        // Propiedades para los filtros
+        // Filtros
         public string BusquedaFilter { get; set; }
         public string ModuloFilter { get; set; }
         public string AccionFilter { get; set; }
         public string FechaInicioFilter { get; set; }
         public string FechaFinFilter { get; set; }
 
-        public BitacoraModel(ConexionBDD dbConnection)
+        public BitacoraModel(ConexionBDD dbConnection, ILogger<BitacoraModel> logger)
         {
             _dbConnection = dbConnection;
+            _logger = logger;
+        }
+
+        private static void AgregarCopiaParametros(SqlCommand cmd, IEnumerable<SqlParameter> parameters)
+        {
+            foreach (var p in parameters)
+            {
+                var copy = new SqlParameter(p.ParameterName, p.Value ?? DBNull.Value);
+                cmd.Parameters.Add(copy);
+            }
         }
 
         public async Task<IActionResult> OnGetAsync(
@@ -52,6 +64,8 @@ namespace InventarioComputo.Pages
 
             if (RolUsuario != "Administrador")
             {
+                _logger.LogWarning("Bitácora: acceso denegado para usuario {User} con rol {Rol}",
+                    User?.Identity?.Name ?? "(anon)", RolUsuario ?? "(null)");
                 return Forbid();
             }
 
@@ -74,11 +88,9 @@ namespace InventarioComputo.Pages
             };
 
             if (!columnasValidas.ContainsKey(SortColumn))
-            {
                 SortColumn = "FechaHora";
-            }
 
-            SortDirection = SortDirection.ToUpper() == "DESC" ? "DESC" : "ASC";
+            SortDirection = SortDirection?.ToUpper() == "DESC" ? "DESC" : "ASC";
 
             await CargarDatosFiltros();
             await CargarRegistros(columnasValidas[SortColumn]);
@@ -92,38 +104,27 @@ namespace InventarioComputo.Pages
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 {
-                    // Cargar módulos
+                    // Módulos
                     var cmdModulos = new SqlCommand("SELECT id_modulo, Modulo FROM Modulos ORDER BY Modulo", connection);
                     using (var reader = await cmdModulos.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
-                        {
-                            Modulos.Add(new Modulo
-                            {
-                                Id = reader.GetInt32(0),
-                                Nombre = reader.GetString(1)
-                            });
-                        }
+                            Modulos.Add(new Modulo { Id = reader.GetInt32(0), Nombre = reader.GetString(1) });
                     }
 
-                    // Cargar acciones
+                    // Acciones
                     var cmdAcciones = new SqlCommand("SELECT id_accion, Accion FROM Acciones ORDER BY Accion", connection);
                     using (var reader = await cmdAcciones.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
-                        {
-                            Acciones.Add(new Accion
-                            {
-                                Id = reader.GetInt32(0),
-                                Nombre = reader.GetString(1)
-                            });
-                        }
+                            Acciones.Add(new Accion { Id = reader.GetInt32(0), Nombre = reader.GetString(1) });
                     }
                 }
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                ModelState.AddModelError("", $"Error al cargar filtros: {ex.Message}");
+                ModelState.AddModelError("", "Error al cargar filtros de bitácora.");
+                _logger.LogError(ex, "Bitácora: error al cargar los filtros (Módulos/Acciones).");
             }
         }
 
@@ -133,77 +134,105 @@ namespace InventarioComputo.Pages
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 {
-                    var queryBuilder = new System.Text.StringBuilder();
-                    queryBuilder.Append(@"
-                        SELECT
-                            b.id_evento,
-                            u.Username,
-                            b.FechaHora,
-                            m.Modulo,
-                            a.Accion,
-                            b.Detalles,
-                            COUNT(*) OVER() AS TotalRegistros
+                    var where = new System.Text.StringBuilder(@"
                         FROM Bitacora b
                         JOIN Usuarios u ON b.id_usuario = u.id_usuario
                         JOIN Modulos m ON b.id_modulo = m.id_modulo
                         JOIN Acciones a ON b.id_accion = a.id_accion
                         WHERE 1=1 ");
 
-                    // Agregar cláusulas WHERE para los filtros
-                    if (!string.IsNullOrEmpty(BusquedaFilter))
+                    var parameters = new List<SqlParameter>();
+
+                    // Filtros
+                    if (!string.IsNullOrWhiteSpace(BusquedaFilter))
                     {
-                        queryBuilder.Append("AND (b.Detalles LIKE '%' + @Busqueda + '%' OR u.Username LIKE '%' + @Busqueda + '%') ");
-                    }
-                    if (!string.IsNullOrEmpty(ModuloFilter))
-                    {
-                        queryBuilder.Append("AND b.id_modulo = @Modulo ");
-                    }
-                    if (!string.IsNullOrEmpty(AccionFilter))
-                    {
-                        queryBuilder.Append("AND b.id_accion = @Accion ");
-                    }
-                    if (!string.IsNullOrEmpty(FechaInicioFilter))
-                    {
-                        queryBuilder.Append("AND b.FechaHora >= @FechaInicio ");
-                    }
-                    if (!string.IsNullOrEmpty(FechaFinFilter))
-                    {
-                        queryBuilder.Append("AND b.FechaHora <= @FechaFin ");
+                        where.Append(" AND (b.Detalles LIKE @Busqueda OR u.Username LIKE @Busqueda) ");
+                        parameters.Add(new SqlParameter("@Busqueda", $"%{BusquedaFilter}%"));
                     }
 
-                    queryBuilder.Append($@"
+                    if (!string.IsNullOrWhiteSpace(ModuloFilter) && int.TryParse(ModuloFilter, out var moduloId))
+                    {
+                        where.Append(" AND b.id_modulo = @Modulo ");
+                        parameters.Add(new SqlParameter("@Modulo", moduloId));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(AccionFilter) && int.TryParse(AccionFilter, out var accionId))
+                    {
+                        where.Append(" AND b.id_accion = @Accion ");
+                        parameters.Add(new SqlParameter("@Accion", accionId));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(FechaInicioFilter) && DateTime.TryParse(FechaInicioFilter, out var fIni))
+                    {
+                        where.Append(" AND b.FechaHora >= @FechaInicio ");
+                        parameters.Add(new SqlParameter("@FechaInicio", fIni));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(FechaFinFilter) && DateTime.TryParse(FechaFinFilter, out var fFin))
+                    {
+                        where.Append(" AND b.FechaHora <= @FechaFin ");
+                        parameters.Add(new SqlParameter("@FechaFin", fFin));
+                    }
+
+                    // COUNT total registros
+                    var countSql = "SELECT COUNT(*) " + where.ToString();
+                    int totalRegistros = 0;
+                    using (var countCmd = new SqlCommand(countSql, connection))
+                    {
+                        AgregarCopiaParametros(countCmd, parameters); // usar copias
+                        var countObj = await countCmd.ExecuteScalarAsync();
+                        if (countObj != null && countObj != DBNull.Value)
+                            totalRegistros = Convert.ToInt32(countObj);
+                    }
+
+                    RegistrosPorPagina = 15;
+                    TotalPaginas = Math.Max(1, (int)Math.Ceiling(totalRegistros / (double)RegistrosPorPagina));
+
+                    var selectSql = $@"
+                        SELECT
+                            b.id_evento,
+                            u.Username,
+                            b.FechaHora,
+                            m.Modulo,
+                            a.Accion,
+                            b.Detalles
+                        {where}
                         ORDER BY {sortColumn} {SortDirection}
-                        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY");
+                        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
-                    var command = new SqlCommand(queryBuilder.ToString(), connection);
-                    command.Parameters.AddWithValue("@Busqueda", BusquedaFilter ?? "");
-                    command.Parameters.AddWithValue("@Modulo", string.IsNullOrEmpty(ModuloFilter) ? DBNull.Value : (object)int.Parse(ModuloFilter));
-                    command.Parameters.AddWithValue("@Accion", string.IsNullOrEmpty(AccionFilter) ? DBNull.Value : (object)int.Parse(AccionFilter));
-                    command.Parameters.AddWithValue("@FechaInicio", string.IsNullOrEmpty(FechaInicioFilter) ? DBNull.Value : (object)DateTime.Parse(FechaInicioFilter));
-                    command.Parameters.AddWithValue("@FechaFin", string.IsNullOrEmpty(FechaFinFilter) ? DBNull.Value : (object)DateTime.Parse(FechaFinFilter));
-                    command.Parameters.AddWithValue("@Offset", (PaginaActual - 1) * RegistrosPorPagina);
-                    command.Parameters.AddWithValue("@PageSize", RegistrosPorPagina);
-
-                    using (var reader = await command.ExecuteReaderAsync())
+                    using (var cmd = new SqlCommand(selectSql, connection))
                     {
-                        while (await reader.ReadAsync())
+                        AgregarCopiaParametros(cmd, parameters); // usar copias
+                        cmd.Parameters.AddWithValue("@Offset", (PaginaActual - 1) * RegistrosPorPagina);
+                        cmd.Parameters.AddWithValue("@PageSize", RegistrosPorPagina);
+
+                        Registros.Clear();
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
                         {
-                            Registros.Add(new BitacoraRegistro
+                            while (await reader.ReadAsync())
                             {
-                                IdEvento = reader.GetInt32(0),
-                                Usuario = reader.GetString(1),
-                                FechaHora = reader.GetDateTime(2),
-                                Modulo = reader.GetString(3),
-                                Accion = reader.GetString(4),
-                                Detalles = reader.GetString(5)
-                            });
+                                Registros.Add(new BitacoraRegistro
+                                {
+                                    IdEvento = reader.GetInt32(0),
+                                    Usuario = reader.GetString(1),
+                                    FechaHora = reader.GetDateTime(2),
+                                    Modulo = reader.GetString(3),
+                                    Accion = reader.GetString(4),
+                                    Detalles = reader.GetString(5)
+                                });
+                            }
                         }
                     }
                 }
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                // Manejar el error
+                _logger.LogError(ex,
+                    "Bitácora: error al cargar registros. pagina={PaginaActual}, sort={SortColumn} {SortDirection}, filtros: busqueda='{BusquedaFilter}', modulo='{ModuloFilter}', accion='{AccionFilter}', fechainicio='{FechaInicioFilter}', fechafin='{FechaFinFilter}'",
+                    PaginaActual, SortColumn, SortDirection, BusquedaFilter, ModuloFilter, AccionFilter, FechaInicioFilter, FechaFinFilter);
+
+                TempData["Error"] = "Ocurrió un error al cargar la bitácora.";
             }
         }
     }
@@ -212,7 +241,7 @@ namespace InventarioComputo.Pages
     {
         public int IdEvento { get; set; }
         public string Usuario { get; set; }
-        public System.DateTime FechaHora { get; set; }
+        public DateTime FechaHora { get; set; }
         public string Modulo { get; set; }
         public string Accion { get; set; }
         public string Detalles { get; set; }

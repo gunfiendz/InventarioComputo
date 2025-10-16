@@ -1,10 +1,8 @@
 ﻿@page "{handler?}/{id:int?}"
 @model InventarioComputo.Pages.AsignarModel
 @{
-    // Título dinámico según el modo
     ViewData["Title"] = Model.Modo == "Crear" ? "Nueva Asignación" : Model.Modo == "Editar" ? "Editar Asignación" : "Ver Asignación";
     Layout = "_LayoutGeneral";
-    // Bandera para bloquear campos en modo "Ver"
     bool esModoLectura = Model.Modo == "Ver";
 }
 
@@ -27,12 +25,22 @@
         }
         else
         {
-            <div class="form-group">
-                <label asp-for="Asignacion.IdActivoFijo"></label>
-                <select asp-for="Asignacion.IdActivoFijo" class="form-control input-beige" asp-items="@(new SelectList(Model.ActivosDisponibles, "Id", "Identificador"))">
-                    <option value="">-- Seleccione un equipo disponible --</option>
-                </select>
+            <div class="form-group position-relative" style="max-width:700px">
+                <label for="txtEquipo">Equipo (buscar por Etiqueta, Serie, Marca/Modelo, Perfil):</label>
+
+                <input id="txtEquipo"
+                       type="text"
+                       class="form-control input-beige"
+                       placeholder="Escribe al menos 2 caracteres…"
+                       autocomplete="off"
+                @(esModoLectura ? "readonly" : "") />
+
+                <div id="ac-menu" class="ac-menu d-none"></div>
+
+                <input type="hidden" asp-for="Asignacion.IdActivoFijo" />
                 <span asp-validation-for="Asignacion.IdActivoFijo" class="text-danger"></span>
+
+                <small class="text-muted">Usa ↑/↓ para navegar sugerencias y Enter para seleccionar.</small>
             </div>
         }
 
@@ -90,48 +98,221 @@
         </div>
 
         <div class="form-actions mt-4">
-            @if (Model.Modo == "Crear")
+            @if (Model.Modo == "Crear" || Model.Modo == "Editar")
             {
-                <button type="submit" class="btn btn-beige">Confirmar Asignación</button>
+                <button type="submit" class="btn btn-beige">Guardar</button>
+                <a href="/Asignaciones/Index" class="btn btn-cancelar">Cancelar</a>
             }
-            @if (Model.Modo == "Editar")
+            else
             {
-                <button type="submit" class="btn btn-beige">Actualizar</button>
+                <a href="/Asignaciones/Index" class="btn btn-cancelar">Volver</a>
             }
-            @if (Model.Modo == "Ver")
-            {
-                <a asp-page="Asignar" asp-page-handler="Editar" asp-route-id="@Model.Asignacion.IdEmpleadoEquipo" class="btn btn-beige">Editar</a>
-            }
-            <a href="/Asignaciones/Index" class="btn btn-cancelar">Volver al Historial</a>
+            
         </div>
     </form>
 </div>
 
 @section Scripts {
+    <!-- jQuery debe ir ANTES del _ValidationScriptsPartial -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <partial name="_ValidationScriptsPartial" />
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Script para que el depto se ponga solo al elegir empleado
+            const txt = document.getElementById('txtEquipo');               
+            const menu = document.getElementById('ac-menu');                
+            const hiddenId = document.querySelector('input[name="Asignacion.IdActivoFijo"]'); 
+            const esModoLectura = @esModoLectura.ToString().ToLower();
+
+            // Base URL correcta
+            const baseUrl = '@Url.Page("Asignar")';
+
+            // --------- AUTOCOMPLETE ----------
+            if (txt && menu && hiddenId && !esModoLectura) {
+                let results = [];
+                let activeIndex = -1;
+                let debounceTimer = null;
+                let lastTerm = '';
+
+                // Precarga etiqueta si ya tenemos un Id (>0) por re-post/validación
+                (async function preload() {
+                    if (hiddenId.value && hiddenId.value !== '0') {
+                        try {
+                            const r = await fetch(`${baseUrl}?handler=BuscarEquipos&id=${encodeURIComponent(hiddenId.value)}`);
+                            if (r.ok) {
+                                const d = await r.json();
+                                if (d && d.label) txt.value = d.label;
+                            }
+                        } catch { }
+                    }
+                })();
+
+                function setActive(i) {
+                    const items = menu.querySelectorAll('.ac-item');
+                    items.forEach(el => el.classList.remove('active'));
+                    if (i >= 0 && i < items.length) {
+                        items[i].classList.add('active');
+                        activeIndex = i;
+                    } else {
+                        activeIndex = -1;
+                    }
+                }
+
+                function highlight(text, term) {
+                    if (!term) return text;
+                    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const re = new RegExp(esc(term), 'ig');
+                    return text.replace(re, m => `<span class="ac-highlight">${m}</span>`);
+                }
+
+                function render(term) {
+                    menu.innerHTML = '';
+                    if (!results.length) {
+                        menu.classList.add('d-none');
+                        return;
+                    }
+                    for (let i = 0; i < results.length; i++) {
+                        const r = results[i];
+                        const div = document.createElement('div');
+                        div.className = 'ac-item';
+                        div.dataset.id = r.id;
+                        div.dataset.label = r.label;
+                        div.innerHTML = highlight(r.label, term);
+                        div.addEventListener('mousedown', (e) => {
+                            e.preventDefault();
+                            choose(i);
+                        });
+                        menu.appendChild(div);
+                    }
+                    setActive(0);
+                    menu.classList.remove('d-none');
+                }
+
+                async function search(term) {
+                    term = term.trim();
+                    if (term.length < 2) {
+                        results = [];
+                        render('');
+                        return;
+                    }
+                    if (term === lastTerm) return;
+                    lastTerm = term;
+
+                    try {
+                        const r = await fetch(`${baseUrl}?handler=BuscarEquipos&term=${encodeURIComponent(term)}`);
+                        if (!r.ok) return;
+                        const data = await r.json();
+                        results = Array.isArray(data) ? data : [];
+                        render(term);
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+
+                function choose(index) {
+                    if (index < 0 || index >= results.length) return;
+                    const sel = results[index];
+                    txt.value = sel.label;
+                    hiddenId.value = sel.id;
+                    menu.classList.add('d-none');
+                }
+
+                txt.addEventListener('input', () => {
+                    hiddenId.value = ''; // limpiar hasta seleccionar
+                    menu.classList.add('d-none');
+                    const term = txt.value;
+                    if (debounceTimer) clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => search(term), 220);
+                });
+
+                txt.addEventListener('keydown', (e) => {
+                    const visible = !menu.classList.contains('d-none');
+                    if (!visible) return;
+                    const items = menu.querySelectorAll('.ac-item');
+                    if (!items.length) return;
+
+                    switch (e.key) {
+                        case 'ArrowDown':
+                            e.preventDefault();
+                            setActive(Math.min(activeIndex + 1, items.length - 1));
+                            break;
+                        case 'ArrowUp':
+                            e.preventDefault();
+                            setActive(Math.max(activeIndex - 1, 0));
+                            break;
+                        case 'Enter':
+                            if (activeIndex >= 0) {
+                                e.preventDefault();
+                                choose(activeIndex);
+                            }
+                            break;
+                        case 'Escape':
+                            menu.classList.add('d-none');
+                            break;
+                    }
+                });
+
+                // Resolver exacto al perder foco (si tecleó la etiqueta completa)
+                txt.addEventListener('blur', async () => {
+                    if (hiddenId.value) return;
+                    const label = txt.value.trim();
+                    if (!label) return;
+
+                    try {
+                        const r = await fetch(`${baseUrl}?handler=BuscarEquipos&exact=${encodeURIComponent(label)}`);
+                        if (r.ok) {
+                            const d = await r.json();
+                            if (d && d.id) {
+                                hiddenId.value = d.id;
+                                txt.value = d.label;
+                                return;
+                            }
+                        }
+                        hiddenId.value = '';
+                    } catch { /* noop */ }
+                });
+
+                // Cerrar menú si clic fuera
+                document.addEventListener('click', (e) => {
+                    if (!menu.contains(e.target) && e.target !== txt) {
+                        menu.classList.add('d-none');
+                    }
+                });
+
+                // Validación al enviar
+                const form = txt.closest('form');
+                form.addEventListener('submit', (e) => {
+                    if (!hiddenId.value) {
+                        e.preventDefault();
+                        alert('Debes seleccionar un equipo válido de las sugerencias.');
+                        txt.focus();
+                    }
+                });
+            }
+
             const empleadoSelect = document.getElementById('selectEmpleado');
             const departamentoSelect = document.getElementById('selectDepartamento');
 
-            empleadoSelect.addEventListener('change', async function () {
-                const empleadoId = this.value;
-                if (!empleadoId) {
-                    departamentoSelect.value = "";
-                    return;
-                }
-                try {
-                    const response = await fetch(`/Asignar?handler=EmpleadoInfo&idEmpleado=${empleadoId}`);
-                    if (!response.ok) return;
-                    const data = await response.json();
-                    if (data.idDepartamento) {
-                        departamentoSelect.value = data.idDepartamento;
+            if (empleadoSelect && departamentoSelect) {
+                empleadoSelect.addEventListener('change', async function () {
+                    const empleadoId = this.value;
+                    if (!empleadoId) {
+                        departamentoSelect.value = "";
+                        return;
                     }
-                } catch (error) {
-                    console.error("Error al obtener info del empleado:", error);
-                }
-            });
+                    try {
+                        const response = await fetch(`${baseUrl}?handler=EmpleadoInfo&idEmpleado=${empleadoId}`);
+                        if (!response.ok) return;
+                        const data = await response.json();
+                        if (data.idDepartamento) {
+                            departamentoSelect.value = data.idDepartamento;
+                        }
+                    } catch (error) {
+                        console.error("Error al obtener info del empleado:", error);
+                    }
+                });
+            }
         });
     </script>
 }
+

@@ -28,7 +28,7 @@ namespace InventarioComputo.Pages.Mantenimientos
             _logger = logger;
         }
 
-        public async Task<IActionResult> OnGetAsync(string handler, int? id)
+        public async Task<IActionResult> OnGetAsync(string handler, int? id, int? idEquipo)
         {
             try
             {
@@ -45,6 +45,13 @@ namespace InventarioComputo.Pages.Mantenimientos
                 {
                     await CargarMantenimientoExistente(id.Value);
                     if (Mantenimiento == null) return NotFound();
+                }
+                else if (idEquipo.HasValue)
+                {
+                    if (Equipos.Exists(e => e.Id == idEquipo.Value))
+                    {
+                        Mantenimiento.IdActivoFijo = idEquipo.Value;
+                    }
                 }
 
                 return Page();
@@ -189,6 +196,66 @@ namespace InventarioComputo.Pages.Mantenimientos
             }
             return empleados;
         }
+
+        public async Task<IActionResult> OnGetBuscarEquiposAsync(string term, int? id, string exact)
+        {
+            using var conn = await _dbConnection.GetConnectionAsync();
+
+            if (id.HasValue && id.Value > 0)
+            {
+                var q = @"SELECT TOP 1 af.id_activofijo,
+                         CONCAT(af.EtiquetaInv,' - ',m.Marca,' ',mo.Modelo) AS Label
+                  FROM ActivosFijos af
+                  JOIN Perfiles p ON af.id_perfil = p.id_perfil
+                  JOIN Modelos mo ON p.id_modelo = mo.id_modelo
+                  JOIN Marcas m ON mo.id_marca = m.id_marca
+                  WHERE af.id_activofijo = @id";
+                using var cmd = new SqlCommand(q, conn);
+                cmd.Parameters.AddWithValue("@id", id.Value);
+                using var rd = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow);
+                if (await rd.ReadAsync())
+                    return new JsonResult(new { id = rd.GetInt32(0), label = rd.GetString(1) });
+                return new JsonResult(null);
+            }
+
+            if (!string.IsNullOrWhiteSpace(exact))
+            {
+                var q = @"SELECT TOP 1 af.id_activofijo,
+                         CONCAT(af.EtiquetaInv,' - ',m.Marca,' ',mo.Modelo) AS Label
+                  FROM ActivosFijos af
+                  JOIN Perfiles p ON af.id_perfil = p.id_perfil
+                  JOIN Modelos mo ON p.id_modelo = mo.id_modelo
+                  JOIN Marcas m ON mo.id_marca = m.id_marca
+                  WHERE CONCAT(af.EtiquetaInv,' - ',m.Marca,' ',mo.Modelo) = @t";
+                using var cmd = new SqlCommand(q, conn);
+                cmd.Parameters.AddWithValue("@t", exact.Trim());
+                using var rd = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow);
+                if (await rd.ReadAsync())
+                    return new JsonResult(new { id = rd.GetInt32(0), label = rd.GetString(1) });
+                return new JsonResult(null);
+            }
+
+            term ??= "";
+            var qSearch = @"
+SELECT TOP 10 af.id_activofijo,
+       CONCAT(af.EtiquetaInv,' - ',m.Marca,' ',mo.Modelo) AS Label
+FROM ActivosFijos af
+JOIN Perfiles p ON af.id_perfil = p.id_perfil
+JOIN Modelos mo ON p.id_modelo = mo.id_modelo
+JOIN Marcas m ON mo.id_marca = m.id_marca
+WHERE af.EtiquetaInv LIKE @t OR m.Marca LIKE @t OR mo.Modelo LIKE @t OR p.NombrePerfil LIKE @t
+ORDER BY af.EtiquetaInv";
+            using (var cmd = new SqlCommand(qSearch, conn))
+            {
+                cmd.Parameters.AddWithValue("@t", $"%{term.Trim()}%");
+                using var rd = await cmd.ExecuteReaderAsync();
+                var list = new List<object>();
+                while (await rd.ReadAsync())
+                    list.Add(new { id = rd.GetInt32(0), label = rd.GetString(1) });
+                return new JsonResult(list);
+            }
+        }
+
 
         public async Task<IActionResult> OnPostAsync()
         {

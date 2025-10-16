@@ -8,7 +8,6 @@
 @inject PermisosService Perms
 
 @{
-    // Calculamos permisos una sola vez para esta vista
     var canModActivos = await Perms.TieneAsync(User, PermisosConstantes.ModificarActivos);
     var canModEquipos = await Perms.TieneAsync(User, PermisosConstantes.ModificarEquipos);
     var canModMantenimientos = await Perms.TieneAsync(User, PermisosConstantes.ModificarMantenimientos);
@@ -19,7 +18,6 @@
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-laptop"></i> Inventario de Equipos</h1>
 
-        @* Botones de alta masiva / nuevo: requieren ModificarActivos *@
         @if (canModActivos)
         {
             <a href="/Inventario/FormMasivo" class="btn btn-beige">
@@ -32,16 +30,15 @@
         }
     </div>
 
-    <div class="filtros-container beige-bg">
+    <form method="get" class="filtros-container beige-bg">
         <div class="filtros-group">
             <div class="filtro-item">
-                <label for="filtro-tipoequipo" class="form-label beige-text">Tipo de Equipo:</label>
-                <select id="filtro-tipoequipo" class="form-select input-beige">
+                <label class="form-label beige-text">Tipo de Equipo:</label>
+                <select id="filtro-tipoequipo" name="TipoEquipoFilter" class="form-select input-beige">
                     <option value="">Todos</option>
                     @foreach (var item in Model.TiposEquipos)
                     {
-                        <option value="@item.id_tipoequipo"
-                                selected="@(item.id_tipoequipo.ToString() == Model.TipoEquipoFilter)">
+                        <option value="@item.id_tipoequipo" selected="@(item.id_tipoequipo.ToString() == Model.TipoEquipoFilter)">
                             @item.NombreTipoEquipo
                         </option>
                     }
@@ -49,13 +46,12 @@
             </div>
 
             <div class="filtro-item">
-                <label for="filtro-marca" class="form-label beige-text">Marca:</label>
-                <select id="filtro-marca" class="form-select input-beige">
+                <label class="form-label beige-text">Marca:</label>
+                <select id="filtro-marca" name="MarcaFilter" class="form-select input-beige">
                     <option value="">Todas</option>
                     @foreach (var item in Model.Marcas)
                     {
-                        <option value="@item.id_marca"
-                                selected="@(item.id_marca.ToString() == Model.MarcaFilter)">
+                        <option value="@item.id_marca" selected="@(item.id_marca.ToString() == Model.MarcaFilter)">
                             @item.NombreMarca
                         </option>
                     }
@@ -63,62 +59,80 @@
             </div>
 
             <div class="filtro-item">
-                <label for="filtro-departamentoempresa" class="form-label beige-text">Departamento:</label>
-                <select id="filtro-departamentoempresa" class="form-select input-beige">
+                <label class="form-label beige-text">Departamento:</label>
+                <select id="filtro-departamentoempresa" name="DepartamentoEmpresaFilter" class="form-select input-beige">
                     <option value="">Todas</option>
                     @foreach (var item in Model.DepartamentosEmpresa)
                     {
-                        <option value="@item.id_DE"
-                                selected="@(item.id_DE.ToString() == Model.DepartamentoEmpresaFilter)">
+                        <option value="@item.id_DE" selected="@(item.id_DE.ToString() == Model.DepartamentoEmpresaFilter)">
                             @item.NombreDepartamento
                         </option>
                     }
                 </select>
             </div>
-        </div>
-    </div>
 
-    <div class="filtros-container beige-bg">
-        <div class="filtros-group">
             <div class="filtro-item">
-                <label for="filtro-estado" class="form-label beige-text">Estado:</label>
-                <select id="filtro-estado" class="form-select input-beige">
+                <label class="form-label beige-text">Estado:</label>
+                <select id="filtro-estado" name="EstadoFilter" class="form-select input-beige">
                     <option value="">Todos</option>
                     @foreach (var item in Model.Estados)
                     {
-                        <option value="@item.id_estado"
-                                selected="@(item.id_estado.ToString() == Model.EstadoFilter)">
+                        <option value="@item.id_estado" selected="@(item.id_estado.ToString() == Model.EstadoFilter)">
                             @item.EstadoActual
                         </option>
                     }
                 </select>
             </div>
 
+            <!-- Filtros de fecha de compra -->
             <div class="filtro-item">
-                <label for="filtro-empleado" class="form-label beige-text">Asignado a:</label>
-                <select id="filtro-empleado" class="form-select input-beige">
-                    <option value="">Cualquiera</option>
-                    @foreach (var item in Model.Empleados)
-                    {
-                        <option value="@item.id_empleado"
-                                selected="@(item.id_empleado.ToString() == Model.EmpleadoFilter)">
-                            @item.NombreEmpleado
-                        </option>
-                    }
+                <label class="form-label beige-text">Comprado desde:</label>
+                <input type="date"
+                       id="filtro-fechadesde"
+                       name="FechaDesdeFilter"
+                       class="form-control input-beige"
+                       value="@(Model.FechaDesdeFilter?.ToString("yyyy-MM-dd"))" />
+            </div>
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Comprado hasta:</label>
+                <input type="date"
+                       id="filtro-fechahasta"
+                       name="FechaHastaFilter"
+                       class="form-control input-beige"
+                       value="@(Model.FechaHastaFilter?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <!-- Fin filtros de fecha -->
+
+            <div class="filtro-item">
+                <label class="form-label beige-text">Vida útil:</label>
+                <select id="filtro-vidautil" name="VidaUtilFilter" class="form-select input-beige">
+                    <option value="" selected="@(string.IsNullOrEmpty(Model.VidaUtilFilter))">Todas</option>
+                    <option value="sin-dato" selected="@(Model.VidaUtilFilter == "sin-dato")">Sin dato</option>
+                    <option value="vencida" selected="@(Model.VidaUtilFilter == "vencida")">Vencida (≤ 0 años)</option>
+                    <option value="0-1" selected="@(Model.VidaUtilFilter == "0-1")">0 a 1 año</option>
+                    <option value="1-3" selected="@(Model.VidaUtilFilter == "1-3")">1 a 3 años</option>
+                    <option value="3plus" selected="@(Model.VidaUtilFilter == "3plus")">Más de 3 años</option>
                 </select>
             </div>
 
             <div class="filtro-item">
-                <label for="filtro-busqueda" class="form-label beige-text">Buscar:</label>
-                <input type="text" id="filtro-busqueda" class="form-control input-beige"
-                       placeholder="N° Serie, Etiqueta..."
-                       value="@Model.BusquedaFilter">
+                <label class="form-label beige-text">Buscar:</label>
+                <input type="text" id="filtro-busqueda" name="BusquedaFilter" class="form-control input-beige"
+                       placeholder="N° Serie, Etiqueta..." value="@Model.BusquedaFilter">
             </div>
         </div>
-        <button id="btn-aplicar-filtros" class="btn btn-beige-sm">
-            <i class="fas fa-filter"></i> Aplicar Filtros
-        </button>
-    </div>
+
+        <!-- Conserva orden actual y reinicia a página 1 al aplicar -->
+        <input type="hidden" name="sortColumn" value="@Model.SortColumn" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+        <input type="hidden" name="pagina" value="1" />
+
+        <div class="d-flex justify-content-end mt-2">
+            <a href="/Inventario/Index" class="btn btn-cancelar me-2">Limpiar</a>
+            <button type="submit" class="btn btn-beige-sm"><i class="fas fa-filter"></i> Aplicar Filtros</button>
+        </div>
+    </form>
 
     <div class="table-responsive">
         <table class="table table-hover table-beige sortable-table">
@@ -215,6 +229,19 @@
                             }
                         </a>
                     </th>
+                    <th data-sort-column="VidaUtil">
+                        <a href="#" class="sort-link">
+                            Vida útil (años)
+                            @if (Model.SortColumn == "VidaUtil")
+                            {
+                                <i class="fas fa-sort-@(Model.SortDirection == "ASC" ? "up" : "down")"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-sort"></i>
+                            }
+                        </a>
+                    </th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -227,53 +254,45 @@
                         <td>@equipo.TipoEquipo</td>
                         <td>@equipo.Marca - @equipo.Modelo</td>
                         <td>@equipo.DepartamentoEmpresa</td>
-                        <td>
-                            <span class="badge estado-@equipo.Estado.ToLower()">@equipo.Estado</span>
-                        </td>
+                        <td><span class="badge estado-@equipo.Estado.ToLower()">@equipo.Estado</span></td>
                         <td>@(equipo.AsignadoA ?? "No asignado")</td>
+                        <td>
+                            @{
+                                if (equipo.VidaUtilAnios == null)
+                                {
+                                    @:Sin dato
+                                }
+                                else if (equipo.VidaUtilAnios <= 0)
+                                {
+                                    <span class="badge bg-danger">Vencida</span>
+                                }
+                                else
+                                {
+                                    @($"{equipo.VidaUtilAnios} años")
+                                }
+                            }
+                        </td>
                         <td class="acciones">
-                            @* Ver / Editar: si puede modificar activos mostramos Editar; si no, solo Ver *@
                             @if (canModActivos)
                             {
-                                <a href="/Inventario/Formulario/Editar/@equipo.id_activofijo" class="btn btn-action" title="Editar">
-                                    <i class="fas fa-pen"></i>
-                                </a>
+                                <a href="/Inventario/Formulario/Editar/@equipo.id_activofijo" class="btn btn-action" title="Editar"><i class="fas fa-pen"></i></a>
                             }
                             else
                             {
-                                <a href="/Inventario/Formulario/Ver/@equipo.id_activofijo" class="btn btn-action" title="Ver">
-                                    <i class="fas fa-eye"></i>
-                                </a>
+                                <a href="/Inventario/Formulario/Ver/@equipo.id_activofijo" class="btn btn-action" title="Ver"><i class="fas fa-eye"></i></a>
                             }
 
-                            @* Asignar: requiere ModificarEquipos *@
                             @if (canModEquipos)
                             {
-                                <button class="btn btn-action btn-asignar"
-                                        data-id="@equipo.id_activofijo"
-                                        title="Asignar Activo">
-                                    <i class="fas fa-user-check"></i>
-                                </button>
+                                <button class="btn btn-action btn-asignar" data-id="@equipo.id_activofijo" title="Asignar Activo"><i class="fas fa-user-check"></i></button>
                             }
-
-                            @* Registrar mantenimiento: requiere ModificarMantenimientos *@
                             @if (canModMantenimientos)
                             {
-                                <button class="btn btn-action btn-mantenimiento"
-                                        data-id="@equipo.id_activofijo"
-                                        title="Registrar mantenimiento">
-                                    <i class="fas fa-tools"></i>
-                                </button>
+                                <button class="btn btn-action btn-mantenimiento" data-id="@equipo.id_activofijo" title="Registrar mantenimiento"><i class="fas fa-tools"></i></button>
                             }
-
-                            @* Eliminar: lo restringimos a AccesoTotal (antes era solo Administrador) *@
                             @if (hasRoot)
                             {
-                                <button class="btn btn-action btn-eliminar"
-                                        data-id="@equipo.id_activofijo"
-                                        title="Eliminar">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
+                                <button class="btn btn-action btn-eliminar" data-id="@equipo.id_activofijo" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
                             }
                         </td>
                     </tr>
@@ -290,12 +309,14 @@
                     var url = $"/Inventario?pagina={i}" +
                     $"&sortColumn={Model.SortColumn}" +
                     $"&sortDirection={Model.SortDirection}" +
-                    $"&tipoequipo={Model.TipoEquipoFilter}" +
-                    $"&marca={Model.MarcaFilter}" +
-                    $"&departamentoempresa={Model.DepartamentoEmpresaFilter}" +
-                    $"&estado={Model.EstadoFilter}" +
-                    $"&empleado={Model.EmpleadoFilter}" +
-                    $"&busqueda={Model.BusquedaFilter}";
+                    $"&TipoEquipoFilter={Model.TipoEquipoFilter}" +
+                    $"&MarcaFilter={Model.MarcaFilter}" +
+                    $"&DepartamentoEmpresaFilter={Model.DepartamentoEmpresaFilter}" +
+                    $"&EstadoFilter={Model.EstadoFilter}" +
+                    $"&VidaUtilFilter={Model.VidaUtilFilter}" +
+                    $"&BusquedaFilter={Model.BusquedaFilter}" +
+                    $"&FechaDesdeFilter={(Model.FechaDesdeFilter.HasValue ? Model.FechaDesdeFilter.Value.ToString("yyyy-MM-dd") : "")}" +
+                    $"&FechaHastaFilter={(Model.FechaHastaFilter.HasValue ? Model.FechaHastaFilter.Value.ToString("yyyy-MM-dd") : "")}";
                     <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
                         <a class="page-link" href="@url">@i</a>
                     </li>
@@ -342,7 +363,7 @@
             }
 
         .fa-sort, .fa-sort-up, .fa-sort-down {
-            font-size: 0.8em;
+            font-size: .8em;
         }
     </style>
 }
@@ -351,15 +372,13 @@
     <script src="~/js/Script_Tablas.js" asp-append-version="true"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Mantenimiento
+            // Navegación acciones
             document.querySelectorAll('.btn-mantenimiento').forEach(btn => {
                 btn.addEventListener('click', function () {
                     const idEquipo = this.getAttribute('data-id');
                     window.location.href = `/Mantenimientos/PruebaFormulario?idEquipo=${idEquipo}`;
                 });
             });
-
-            // Asignar
             document.querySelectorAll('.btn-asignar').forEach(btn => {
                 btn.addEventListener('click', function () {
                     const idEquipo = this.getAttribute('data-id');
@@ -367,7 +386,7 @@
                 });
             });
 
-            // Eliminar
+            // Modal eliminar
             let idActivoFijo = null;
             document.querySelectorAll('.btn-eliminar').forEach(btn => {
                 btn.addEventListener('click', function () {
@@ -376,7 +395,6 @@
                     modal.show();
                 });
             });
-
             document.getElementById('formEliminar').addEventListener('submit', function (e) {
                 if (idActivoFijo) {
                     this.querySelector('#idActivoFijoAEliminar').value = idActivoFijo;
@@ -385,6 +403,30 @@
                     alert('Error: No se ha seleccionado un activo fijo para eliminar.');
                 }
             });
+
+            // Ordenar: ahora usa el FORM GET (ajusta hidden inputs y envía)
+            const filtrosForm = document.querySelector('form.filtros-container');
+            document.querySelectorAll('.sort-link').forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const column = this.closest('th').dataset.sortColumn;
+
+                    const sortColInput = filtrosForm.querySelector('input[name="sortColumn"]');
+                    const sortDirInput = filtrosForm.querySelector('input[name="sortDirection"]');
+                    const paginaInput = filtrosForm.querySelector('input[name="pagina"]');
+
+                    const currentCol = sortColInput.value || 'EtiquetaInv';
+                    const currentDir = (sortDirInput.value || 'ASC').toUpperCase();
+                    const newDir = (currentCol === column && currentDir === 'ASC') ? 'DESC' : 'ASC';
+
+                    sortColInput.value = column;
+                    sortDirInput.value = newDir;
+                    paginaInput.value = '1';
+
+                    filtrosForm.submit();
+                });
+            });
+
         });
     </script>
 }

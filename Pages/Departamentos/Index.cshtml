@@ -5,12 +5,23 @@
     Layout = "_LayoutGeneral";
 }
 
+@using InventarioComputo.Security
+@inject PermisosService Perms
+
+@{
+    var canModDepartamentos = await Perms.TieneAsync(User, PermisosConstantes.ModificarDepartamentos);
+    var hasRoot = await Perms.TieneAsync(User, PermisosConstantes.AccesoTotal);
+}
+
 <div class="inventario-container">
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-building"></i> @ViewData["Title"]</h1>
-        <a href="/Departamentos/DepaForm" class="btn btn-beige">
-            <i class="fas fa-plus"></i> Nuevo Departamento
-        </a>
+        @if (canModDepartamentos)
+        {
+            <a href="/Departamentos/DepaForm" class="btn btn-beige">
+                <i class="fas fa-plus"></i> Nuevo Departamento
+            </a>
+        }
     </div>
 
     @if (TempData["Mensaje"] != null)
@@ -22,19 +33,29 @@
         <div class="alert alert-danger">@TempData["Error"]</div>
     }
 
-    <div class="filtros-container beige-bg">
+    <form id="form-filtros" method="get" class="filtros-container beige-bg">
         <div class="filtros-group">
             <div class="filtro-item">
                 <label class="form-label beige-text">Buscar:</label>
-                <input type="text" id="filtro-busqueda" class="form-control input-beige"
+                <input type="text"
+                       id="filtro-busqueda"
+                       name="BusquedaFilter"
+                       class="form-control input-beige"
                        placeholder="Nombre, descripción..."
-                       value="@Model.BusquedaFilter">
+                       value="@Model.BusquedaFilter" />
+
             </div>
         </div>
-        <button id="btn-aplicar-filtros" class="btn btn-beige-sm">
-            <i class="fas fa-filter"></i> Aplicar Filtros
-        </button>
-    </div>
+
+        <input type="hidden" name="sortColumn" value="@Model.SortColumn" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+        <input type="hidden" name="pagina" value="1" />
+
+        <div class="d-flex justify-content-end mt-2">
+            <a href="/Departamentos/Index" class="btn btn-cancelar me-2">Limpiar</a>
+            <button type="submit" class="btn btn-beige-sm"><i class="fas fa-filter"></i> Aplicar Filtros</button>
+        </div>
+    </form>
 
     <div class="table-responsive">
         <table class="table table-hover table-beige sortable-table">
@@ -92,15 +113,27 @@
                             }
                         </td>
                         <td class="acciones">
-                            <a href="/Departamentos/DepaForm/Editar/@departamento.Id" class="btn btn-action" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <button class="btn btn-action btn-eliminar"
-                                    data-id="@departamento.Id"
-                                    data-nombre="@departamento.Nombre"
-                                    title="Eliminar">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            @if (canModDepartamentos)
+                            {
+                                <a href="/Departamentos/DepaForm/Editar/@departamento.Id" class="btn btn-action" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="/Departamentos/DepaForm/Ver/@departamento.Id" class="btn btn-action" title="Ver">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            }
+
+                            @if (hasRoot){
+                                <button class="btn btn-action btn-eliminar"
+                                        data-id="@departamento.Id"
+                                        data-nombre="@departamento.Nombre"
+                                        title="Eliminar">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            }
                         </td>
                     </tr>
                 }
@@ -114,9 +147,9 @@
                 @for (int i = 1; i <= Model.TotalPaginas; i++)
                 {
                     var url = $"/Departamentos?pagina={i}" +
-                    $"&sortColumn={Model.SortColumn}" +
-                    $"&sortDirection={Model.SortDirection}" +
-                    $"&busqueda={Model.BusquedaFilter}";
+                              $"&sortColumn={Model.SortColumn}" +
+                              $"&sortDirection={Model.SortDirection}" +
+                              $"&BusquedaFilter={Model.BusquedaFilter}";
                     <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
                         <a class="page-link" href="@url">@i</a>
                     </li>
@@ -159,70 +192,75 @@
             border: 1px solid #ddd;
             white-space: nowrap;
         }
-
-        .d-flex {
-            display: flex;
-        }
-
-        .flex-wrap {
-            flex-wrap: wrap;
-        }
-
-        .gap-1 {
-            gap: 0.25rem;
-        }
+        .d-flex { display: flex; }
+        .flex-wrap { flex-wrap: wrap; }
+        .gap-1 { gap: 0.25rem; }
     </style>
 }
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.querySelectorAll('.sort-link').forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                const column = this.closest('th').dataset.sortColumn;
-                const url = new URL(window.location.href);
-                const currentOrder = url.searchParams.get('sortDirection') || 'DESC';
-                const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+        document.addEventListener('DOMContentLoaded', function () {
+            // Ordenamiento con FORM GET
+            const filtrosForm = document.getElementById('form-filtros');
 
-                url.searchParams.set('sortColumn', column);
-                url.searchParams.set('sortDirection', newOrder);
-                url.searchParams.set('pagina', '1');
+            document.querySelectorAll('.sort-link').forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
 
-                window.location.href = url.toString();
+                    const th = this.closest('th');
+                    const column = th ? th.getAttribute('data-sort-column') : null;
+
+                    if (filtrosForm && column) {
+                        const sortColInput = filtrosForm.querySelector('input[name="sortColumn"]');
+                        const sortDirInput = filtrosForm.querySelector('input[name="sortDirection"]');
+                        const paginaInput  = filtrosForm.querySelector('input[name="pagina"]');
+
+                        const currentCol = (sortColInput?.value || 'NombreDepartamento');
+                        const currentDir = ((sortDirInput?.value || 'ASC') + '').toUpperCase();
+                        const newDir     = (currentCol === column && currentDir === 'ASC') ? 'DESC' : 'ASC';
+
+                        if (sortColInput) sortColInput.value = column;
+                        if (sortDirInput) sortDirInput.value = newDir;
+                        if (paginaInput)  paginaInput.value  = '1';
+
+                        filtrosForm.submit();
+                    } else {
+                        // Fallback: construir URL como antes
+                        const url = new URL(window.location.href);
+                        const currentOrder = (url.searchParams.get('sortDirection') || 'ASC').toUpperCase();
+                        const currentColumn = url.searchParams.get('sortColumn') || '';
+                        const newOrder = (currentColumn === column && currentOrder === 'ASC') ? 'DESC' : 'ASC';
+
+                        url.searchParams.set('sortColumn', column || 'NombreDepartamento');
+                        url.searchParams.set('sortDirection', newOrder);
+                        url.searchParams.set('pagina', '1');
+                        window.location.href = url.toString();
+                    }
+                });
             });
-        });
 
-        document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
-            const busqueda = document.getElementById('filtro-busqueda').value;
-
-            const url = new URL(window.location.href);
-            url.searchParams.set('pagina', '1');
-            url.searchParams.set('sortColumn', '@Model.SortColumn');
-            url.searchParams.set('sortDirection', '@Model.SortDirection');
-            if (busqueda) url.searchParams.set('busqueda', busqueda);
-
-            window.location.href = url.toString();
-        });
-
-        let idDepartamentoAEliminar = null;
-        document.querySelectorAll('.btn-eliminar').forEach(btn => {
-            btn.addEventListener('click', function () {
-                idDepartamentoAEliminar = this.getAttribute('data-id');
-                const nombre = this.getAttribute('data-nombre');
-                document.getElementById('nombreDepartamentoEliminar').textContent = nombre;
-                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
-                modal.show();
+            // Eliminar (modal)
+            let idDepartamentoAEliminar = null;
+            document.querySelectorAll('.btn-eliminar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    idDepartamentoAEliminar = this.getAttribute('data-id');
+                    const nombre = this.getAttribute('data-nombre');
+                    document.getElementById('nombreDepartamentoEliminar').textContent = nombre;
+                    const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+                    modal.show();
+                });
             });
-        });
 
-        document.getElementById('formEliminar').addEventListener('submit', function (e) {
-            if (idDepartamentoAEliminar) {
-                this.querySelector('#idDepartamentoAEliminar').value = idDepartamentoAEliminar;
-            } else {
-                e.preventDefault();
-                alert('Error: No se ha seleccionado un departamento para eliminar.');
-            }
+            document.getElementById('formEliminar').addEventListener('submit', function (e) {
+                if (idDepartamentoAEliminar) {
+                    this.querySelector('#idDepartamentoAEliminar').value = idDepartamentoAEliminar;
+                } else {
+                    e.preventDefault();
+                    alert('Error: No se ha seleccionado un departamento para eliminar.');
+                }
+            });
         });
     </script>
 }

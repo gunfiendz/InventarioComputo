@@ -215,4 +215,35 @@ body {
     z-index: 3;
     background: #fff; /* que combine con tus filas */
 }
+    .ac-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-top: none;
+        max-height: 260px;
+        overflow-y: auto;
+        box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    }
+
+    .ac-item {
+        padding: .5rem .75rem;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+        .ac-item:hover, .ac-item.active {
+            background: #f6f6f6;
+        }
+
+    .ac-highlight {
+        font-weight: 600;
+    }
+
+
 

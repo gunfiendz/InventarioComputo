@@ -1,5 +1,0 @@
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Data Source=DESKTOP-78P8T2L;Initial Catalog=InventarioComputo;Integrated Security=True;Multiple Active Result Sets=True;Encrypt=True;Trust Server Certificate=True"
-  }
-}

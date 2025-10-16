@@ -5,6 +5,15 @@
     Layout = "_LayoutGeneral";
 }
 
+@using InventarioComputo.Security
+@inject PermisosService Perms
+
+@{
+    // Calculamos permisos una sola vez para esta vista
+    var canModActivos = await Perms.TieneAsync(User, PermisosConstantes.ModificarActivos);
+    var hasRoot = await Perms.TieneAsync(User, PermisosConstantes.AccesoTotal);
+}
+
 @section Styles {
     <link rel="stylesheet" href="~/Styles/Style_Inventario.css" asp-append-version="true" />
 }
@@ -12,9 +21,12 @@
 <div class="inventario-container">
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-history"></i> @ViewData["Title"]</h1>
-        <a href="/Asignaciones/Asignar" class="btn btn-beige">
-            <i class="fas fa-plus"></i> Nueva Asignación
-        </a>
+        @if (canModActivos)
+        {
+            <a href="/Asignaciones/Asignar" class="btn btn-beige">
+                <i class="fas fa-plus"></i> Nueva Asignación
+            </a>
+        }
     </div>
 
     <form method="get" class="filtros-container beige-bg">
@@ -43,6 +55,14 @@
                 <label class="form-label">Buscar Equipo:</label>
                 <input type="text" asp-for="Busqueda" class="form-control input-beige" placeholder="Etiqueta o No. Serie...">
             </div>
+            <div class="filtro-item">
+                <label class="form-label">Estado Asig.:</label>
+                <select asp-for="EstadoAsignacion" class="form-select input-beige">
+                    <option value="">Todos</option>
+                    <option value="activa">Activa</option>
+                    <option value="historica">Histórica</option>
+                </select>
+            </div>
         </div>
         <div class="d-flex justify-content-end mt-2">
             <a href="/Asignaciones/Index" class="btn btn-cancelar me-2">Limpiar</a>
@@ -59,7 +79,7 @@
                     <th>Tipo Asig.</th>
                     <th><a href="#" class="sort-link" data-sort-column="Empleado">Empleado</a></th>
                     <th><a href="#" class="sort-link" data-sort-column="Departamento">Departamento</a></th>
-                    <th>Estado</th>
+                    <th><a href="#" class="sort-link" data-sort-column="Estado">Estado</a></th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -87,17 +107,30 @@
                             }
                         </td>
                         <td class="acciones">
-                            <a href="/Asignaciones/Asignar/Editar/@item.Id" class="btn btn-action">
-                                <i class="fas fa-pen"></i>
-                            </a>
-                            <button type="button"
-                                  class="btn btn-action btn-eliminar"
-                                  data-id="@item.Id"
-                                  data-equipo="@item.Equipo"      
-                                  data-empleado="@item.Empleado"    
-                                  title="Eliminar">
-                            <i class="fas fa-trash-alt"></i>
-                          </button>
+                            @if (canModActivos)
+                            {
+                                <a href="/Asignaciones/Asignar/Editar/@item.Id" class="btn btn-action" title="Editar">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="/Asignaciones/Asignar/Ver/@item.Id" class="btn btn-action" title="Ver">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            }
+
+                            @if (hasRoot)
+                            {
+                                <button type="button"
+                                        class="btn btn-action btn-eliminar"
+                                        data-id="@item.Id"
+                                        data-equipo="@item.Equipo"
+                                        data-empleado="@item.Empleado"
+                                        title="Eliminar">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            }
                         </td>
                     </tr>
                 }
@@ -110,7 +143,15 @@
             <ul class="pagination">
                 @for (int i = 1; i <= Model.TotalPaginas; i++)
                 {
-                    var url = $"?pagina={i}";
+                    var url = $"/Asignaciones/Index?PaginaActual={i}"
+                    + (string.IsNullOrWhiteSpace(Model.SortColumn) ? "" : $"&sortColumn={Model.SortColumn}")
+                    + (string.IsNullOrWhiteSpace(Model.SortDirection) ? "" : $"&sortDirection={Model.SortDirection}")
+                    + (Model.EmpleadoId.HasValue ? $"&EmpleadoId={Model.EmpleadoId}" : "")
+                    + (Model.DepartamentoId.HasValue ? $"&DepartamentoId={Model.DepartamentoId}" : "")
+                    + (!string.IsNullOrWhiteSpace(Model.FechaInicio) ? $"&FechaInicio={Model.FechaInicio}" : "")
+                    + (!string.IsNullOrWhiteSpace(Model.FechaFin) ? $"&FechaFin={Model.FechaFin}" : "")
+                    + (string.IsNullOrWhiteSpace(Model.Busqueda) ? "" : $"&Busqueda={System.Net.WebUtility.UrlEncode(Model.Busqueda)}")
+                    + (string.IsNullOrWhiteSpace(Model.EstadoAsignacion) ? "" : $"&EstadoAsignacion={Model.EstadoAsignacion}");
                     <li class="page-item @(i == Model.PaginaActual ? "active" : "")">
                         <a class="page-link" href="@url">@i</a>
                     </li>
@@ -118,6 +159,7 @@
             </ul>
         </nav>
     </div>
+
 </div>
 
 <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-labelledby="confirmarEliminarLabel" aria-hidden="true">
@@ -145,24 +187,21 @@
 
 @section Scripts {
     <script>
-        // Sort por encabezado (conserva el patrón que ya usas: querystring sortColumn/sortDirection/paginaActual)
         document.addEventListener('DOMContentLoaded', function () {
-            const ths = document.querySelectorAll('th.sortable[data-sort-column]');
-            ths.forEach(th => {
-                th.style.cursor = 'pointer';
-                th.addEventListener('click', () => {
-                    const column = th.getAttribute('data-sort-column');
+            document.querySelectorAll('a.sort-link[data-sort-column]').forEach(a => {
+                a.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const column = a.getAttribute('data-sort-column');
                     const url = new URL(window.location.href);
 
                     const currentOrder = (url.searchParams.get('sortDirection') || 'ASC').toUpperCase();
-                    let newOrder = 'ASC';
-                    if ((url.searchParams.get('sortColumn') || '') === column && currentOrder === 'ASC') {
-                        newOrder = 'DESC';
-                    }
+                    const currentColumn = url.searchParams.get('sortColumn') || '';
+                    const newOrder = (currentColumn === column && currentOrder === 'ASC') ? 'DESC' : 'ASC';
 
                     url.searchParams.set('sortColumn', column);
                     url.searchParams.set('sortDirection', newOrder);
-                    url.searchParams.set('paginaActual', '1');
+                    url.searchParams.set('pagina', '1'); // reiniciar a la primera página
+
                     window.location.href = url.toString();
                 });
             });

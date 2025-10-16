@@ -19,25 +19,20 @@ namespace InventarioComputo.Pages.Asignaciones
 
         public List<AsignacionHistorialViewModel> Historial { get; set; } = new List<AsignacionHistorialViewModel>();
 
-        [BindProperty(SupportsGet = true)]
-        public string? FechaInicio { get; set; }
-        [BindProperty(SupportsGet = true)]
-        public string? FechaFin { get; set; }
-        [BindProperty(SupportsGet = true)]
-        public int? EmpleadoId { get; set; }
-        [BindProperty(SupportsGet = true)]
-        public int? DepartamentoId { get; set; }
-        [BindProperty(SupportsGet = true)]
-        public string? Busqueda { get; set; }
+        [BindProperty(SupportsGet = true)] public string? FechaInicio { get; set; }
+        [BindProperty(SupportsGet = true)] public string? FechaFin { get; set; }
+        [BindProperty(SupportsGet = true)] public int? EmpleadoId { get; set; }
+        [BindProperty(SupportsGet = true)] public int? DepartamentoId { get; set; }
+        [BindProperty(SupportsGet = true)] public string? Busqueda { get; set; }
 
-        [BindProperty(SupportsGet = true)]
-        public int PaginaActual { get; set; } = 1;
+        // NUEVO: filtro de estado ("", "activa", "historica")
+        [BindProperty(SupportsGet = true)] public string? EstadoAsignacion { get; set; }
+
+        [BindProperty(SupportsGet = true)] public int PaginaActual { get; set; } = 1;
         public int TotalPaginas { get; set; }
         public int RegistrosPorPagina { get; set; } = 15;
-        [BindProperty(SupportsGet = true)]
-        public string SortColumn { get; set; } = "FechaAsignacion";
-        [BindProperty(SupportsGet = true)]
-        public string SortDirection { get; set; } = "DESC";
+        [BindProperty(SupportsGet = true)] public string SortColumn { get; set; } = "FechaAsignacion";
+        [BindProperty(SupportsGet = true)] public string SortDirection { get; set; } = "DESC";
 
         public List<SelectListItem> Empleados { get; set; }
         public List<SelectListItem> Departamentos { get; set; }
@@ -81,38 +76,51 @@ namespace InventarioComputo.Pages.Asignaciones
                 queryBuilder.Append(" AND de.id_DE = @DepartamentoId");
                 parameters.Add(new SqlParameter("@DepartamentoId", DepartamentoId.Value));
             }
-            if (!string.IsNullOrEmpty(FechaInicio))
+
+            if (!string.IsNullOrWhiteSpace(FechaInicio) && DateTime.TryParse(FechaInicio, out var fi))
             {
                 queryBuilder.Append(" AND ee.FechaAsignacion >= @FechaInicio");
-                parameters.Add(new SqlParameter("@FechaInicio", FechaInicio));
+                parameters.Add(new SqlParameter("@FechaInicio", fi.Date));
             }
-            if (!string.IsNullOrEmpty(FechaFin))
+            if (!string.IsNullOrWhiteSpace(FechaFin) && DateTime.TryParse(FechaFin, out var ff))
             {
-                queryBuilder.Append(" AND ee.FechaAsignacion <= @FechaFin");
-                parameters.Add(new SqlParameter("@FechaFin", FechaFin));
+                queryBuilder.Append(" AND ee.FechaAsignacion < @FechaFinNext");
+                parameters.Add(new SqlParameter("@FechaFinNext", ff.Date.AddDays(1)));
             }
+
             if (!string.IsNullOrEmpty(Busqueda))
             {
                 queryBuilder.Append(" AND (af.EtiquetaInv LIKE @Busqueda OR af.NumeroSerie LIKE @Busqueda)");
                 parameters.Add(new SqlParameter("@Busqueda", $"%{Busqueda}%"));
             }
 
-            var sortColumns = new Dictionary<string, string>
+            if (!string.IsNullOrWhiteSpace(EstadoAsignacion))
+            {
+                if (EstadoAsignacion.Equals("activa", StringComparison.OrdinalIgnoreCase))
+                {
+                    queryBuilder.Append(" AND ee.ResponsableActual = 1");
+                }
+                else if (EstadoAsignacion.Equals("historica", StringComparison.OrdinalIgnoreCase))
+                {
+                    queryBuilder.Append(" AND (ee.ResponsableActual = 0 OR ee.FechaRetiro IS NOT NULL)");
+                }
+            }
+
+            var sortColumns = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 { "FechaAsignacion", "ee.FechaAsignacion" },
-                { "Equipo", "Equipo" },
-                { "Empleado", "Empleado" },
-                { "Departamento", "Departamento" },
-                { "FechaRetiro", "ee.FechaRetiro" }
+                { "Equipo", "Equipo" },                
+                { "Empleado", "Empleado" },           
+                { "Departamento", "Departamento" },    
+                { "FechaRetiro", "ee.FechaRetiro" },
+                { "Estado", "EsActiva" }               
             };
 
-
             var sortColumn = sortColumns.ContainsKey(SortColumn) ? sortColumns[SortColumn] : "ee.FechaAsignacion";
-            var sortDirection = SortDirection.ToUpper() == "ASC" ? "ASC" : "DESC";
+            var sortDirection = SortDirection?.ToUpper() == "ASC" ? "ASC" : "DESC";
 
             queryBuilder.Append($" ORDER BY {sortColumn} {sortDirection}, ee.id_empleadoequipo DESC");
             queryBuilder.Append(" OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY");
-
 
             parameters.Add(new SqlParameter("@Offset", (PaginaActual - 1) * RegistrosPorPagina));
             parameters.Add(new SqlParameter("@PageSize", RegistrosPorPagina));
@@ -188,7 +196,7 @@ namespace InventarioComputo.Pages.Asignaciones
                     }
 
                     using (var cmdDel = new SqlCommand("DELETE FROM EmpleadosEquipos WHERE id_empleadoequipo = @Id", connection))
-                    {   
+                    {
                         cmdDel.Parameters.AddWithValue("@Id", id);
                         var rows = await cmdDel.ExecuteNonQueryAsync();
                         if (rows == 0)
@@ -226,7 +234,6 @@ namespace InventarioComputo.Pages.Asignaciones
                 TempData["ErrorMessage"] = $"Error al eliminar la asignación: {ex.Message}";
             }
 
-            // Regresar preservando filtros/orden/paginación actuales
             return Redirect(Request.Path + Request.QueryString.Value);
         }
 

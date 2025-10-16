@@ -25,6 +25,7 @@
     <Content Remove="Pages\Departamentos\FormularioDepartamentos.cshtml" />
     <Content Remove="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
     <Content Remove="Pages\Sucursales.cshtml" />
+    <Content Remove="wwwroot\js\validaciones.js" />
   </ItemGroup>
 
   <!-- Eliminamos esto, lo reemplazamos más abajo -->
@@ -37,6 +38,7 @@
     <_ContentIncludedByDefault Remove="Pages\Departamentos\FormularioDepartamentos.cshtml" />
     <_ContentIncludedByDefault Remove="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
     <_ContentIncludedByDefault Remove="Pages\Sucursales.cshtml" />
+    <_ContentIncludedByDefault Remove="wwwroot\js\validaciones.js" />
     <_ContentIncludedByDefault Remove="wwwroot\Styles\Style_LayoutDashboard.css" />
   </ItemGroup>
 
@@ -45,6 +47,7 @@
     <None Include="Pages\Departamentos\Index.cshtml" />
     <None Include="Pages\EquiposRegistrados\FormularioEquipos.cshtml" />
     <None Include="wwwroot\css\.DS_Store" />
+    <None Include="wwwroot\js\validaciones.js" />
     <None Include="wwwroot\Styles\Style_Index.css" />
   </ItemGroup>
 

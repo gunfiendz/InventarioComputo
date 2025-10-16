@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using InventarioComputo.Data;
-using InventarioComputo.Security; // <- para invalidar caché (opcional)
+using InventarioComputo.Security; // PasswordHasher
 
 namespace InventarioComputo.Pages.Usuarios
 {
@@ -17,10 +16,11 @@ namespace InventarioComputo.Pages.Usuarios
     {
         private readonly ConexionBDD _dbConnection;
         private readonly ILogger<FormularioUsuarioModel> _logger;
-        private readonly PermisosService _permisosService; // <- opcional pero útil
+        private readonly PermisosService _permisosService;
 
         [BindProperty]
         public UsuarioViewModel Usuario { get; set; } = new UsuarioViewModel();
+
         public List<EmpleadoInfo> Empleados { get; set; } = new List<EmpleadoInfo>();
         public List<RolInfo> Roles { get; set; } = new List<RolInfo>();
         public string Modo { get; set; } = "Crear"; // "Crear", "Editar" o "Ver"
@@ -28,7 +28,7 @@ namespace InventarioComputo.Pages.Usuarios
         public FormularioUsuarioModel(
             ConexionBDD dbConnection,
             ILogger<FormularioUsuarioModel> logger,
-            PermisosService permisosService // <- inyéctalo
+            PermisosService permisosService
         )
         {
             _dbConnection = dbConnection;
@@ -49,7 +49,6 @@ namespace InventarioComputo.Pages.Usuarios
 
                 bool esModoLectura = Modo == "Ver";
 
-                // Cargar datos iniciales
                 await CargarDatosIniciales(esModoLectura);
 
                 if (id.HasValue)
@@ -105,7 +104,6 @@ namespace InventarioComputo.Pages.Usuarios
         {
             try
             {
-                // Cargar empleados (solo los que no tienen usuario en modo Crear)
                 if (esModoLectura || Modo == "Editar")
                     Empleados = await ObtenerTodosEmpleados();
                 else
@@ -205,15 +203,16 @@ namespace InventarioComputo.Pages.Usuarios
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 {
                     const string nuevaPassword = "Armeria2025!";
+                    var passwordHash = PasswordHasher.Hash(nuevaPassword); // HASH
 
                     var query = @"
                         UPDATE Usuarios SET
-                            Password = @Password,
+                            Password = @PasswordHash,
                             FechaPassword = GETDATE()
                         WHERE id_usuario = @Id";
 
                     var command = new SqlCommand(query, connection);
-                    command.Parameters.AddWithValue("@Password", nuevaPassword);
+                    command.Parameters.AddWithValue("@PasswordHash", passwordHash);
                     command.Parameters.AddWithValue("@Id", id);
 
                     await command.ExecuteNonQueryAsync();
@@ -245,7 +244,6 @@ namespace InventarioComputo.Pages.Usuarios
                     }
 
                     TempData["Mensaje"] = "¡Contraseña restablecida con éxito!";
-
                     return RedirectToPage(new { handler = "Editar", id });
                 }
             }
@@ -253,14 +251,24 @@ namespace InventarioComputo.Pages.Usuarios
             {
                 _logger.LogError(ex, "Error al restablecer contraseña");
                 TempData["Error"] = "Error al restablecer: " + ex.Message;
-                return RedirectToPage(new { handler = "Editar", id });
+
+                Modo = "Editar";
+                await CargarDatosIniciales(false);
+                await CargarUsuarioExistente(id);
+                return Page();
             }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
+            var esCreacion = (Usuario.Id == 0);
+
+            // LOG de entrada (sin contraseñas)
+            _logger.LogInformation("POST Usuarios: esCreacion={EsCreacion}, Id={Id}, Username='{Username}', IdEmpleado={IdEmpleado}, IdRolSistema={IdRol}",
+                esCreacion, Usuario?.Id, Usuario?.Username, Usuario?.IdEmpleado, Usuario?.IdRolSistema);
+
             // Validación solo para creación
-            if (Usuario.Id == 0)
+            if (esCreacion)
             {
                 if (string.IsNullOrEmpty(Usuario.Password))
                     ModelState.AddModelError("Usuario.Password", "La contraseña es requerida");
@@ -273,74 +281,49 @@ namespace InventarioComputo.Pages.Usuarios
 
             if (!ModelState.IsValid)
             {
-                await CargarDatosIniciales(false);
+                // LOG de errores
+                foreach (var kvp in ModelState)
+                {
+                    foreach (var err in kvp.Value.Errors)
+                    {
+                        _logger.LogWarning("ModelState error en '{Key}': {Error}", kvp.Key, err.ErrorMessage);
+                    }
+                }
+
+                Modo = esCreacion ? "Crear" : "Editar";
+                await CargarDatosIniciales(esModoLectura: false);
                 return Page();
             }
-
-            var esCreacion = (Usuario.Id == 0);
 
             try
             {
                 using (var connection = await _dbConnection.GetConnectionAsync())
                 await using (var tx = connection.BeginTransaction())
                 {
-                    string query;
+                    Modo = esCreacion ? "Crear" : "Editar";
 
                     if (esCreacion)
                     {
-                        query = @"
-                            INSERT INTO Usuarios (
-                                Username, 
-                                Password, 
-                                FechaPassword, 
-                                id_empleado,
-                                id_rol_sistema
-                            ) VALUES (
-                                @Username, 
-                                @Password, 
-                                GETDATE(), 
-                                @IdEmpleado,
-                                @IdRolSistema
-                            );
-                            SELECT SCOPE_IDENTITY();";
-                    }
-                    else
-                    {
-                        query = @"
-                            UPDATE Usuarios SET
-                                Username = @Username,
-                                id_rol_sistema = @IdRolSistema
-                            WHERE id_usuario = @Id";
-                    }
+                        var passwordHash = PasswordHasher.Hash(Usuario.Password);
 
-                    var command = new SqlCommand(query, connection, tx);
-                    command.Parameters.AddWithValue("@Username", Usuario.Username);
+                        var query = @"
+INSERT INTO Usuarios (Username, Password, FechaPassword, id_empleado, id_rol_sistema)
+VALUES (@Username, @PasswordHash, GETDATE(), @IdEmpleado, @IdRolSistema);
+SELECT SCOPE_IDENTITY();";
 
-                    if (esCreacion)
-                        command.Parameters.AddWithValue("@Password", Usuario.Password);
+                        var command = new SqlCommand(query, connection, tx);
+                        command.Parameters.AddWithValue("@Username", Usuario.Username);
+                        command.Parameters.AddWithValue("@PasswordHash", passwordHash);
+                        command.Parameters.AddWithValue("@IdEmpleado", (object?)Usuario.IdEmpleado ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@IdRolSistema", Usuario.IdRolSistema);
 
-                    if (Usuario.IdEmpleado.HasValue)
-                        command.Parameters.AddWithValue("@IdEmpleado", Usuario.IdEmpleado.Value);
-                    else
-                        command.Parameters.AddWithValue("@IdEmpleado", DBNull.Value);
-
-                    command.Parameters.AddWithValue("@IdRolSistema", Usuario.IdRolSistema);
-
-                    if (!esCreacion)
-                        command.Parameters.AddWithValue("@Id", Usuario.Id);
-
-                    if (esCreacion)
-                    {
                         var newIdObj = await command.ExecuteScalarAsync();
                         Usuario.Id = Convert.ToInt32(newIdObj);
 
-                        // === Asignar permisos según rol (solo en creación) ===
+                        // Permisos por rol
                         string rolNombre = await ObtenerNombreRolAsync(connection, tx, Usuario.IdRolSistema);
-
-                        // Calcula bits según el rol
                         var bits = CalcularPermisosPorRol(rolNombre);
 
-                        // MERGE a PermisosUsuarios
                         var qPerm = @"
 MERGE dbo.PermisosUsuarios AS target
 USING (SELECT @IdUsuario AS id_usuario) AS source
@@ -348,16 +331,16 @@ USING (SELECT @IdUsuario AS id_usuario) AS source
 WHEN MATCHED THEN
     UPDATE SET
        VerEmpleados            = @VerEmpleados,
-        VerUsuarios            = @VerUsuarios,
-        VerConexionBDD         = @VerConexionBDD,
-        VerReportes            = @VerReportes,
-        ModificarActivos       = @ModificarActivos,
-        ModificarMantenimientos= @ModificarMantenimientos,
-        ModificarEquipos       = @ModificarEquipos,
-        ModificarDepartamentos = @ModificarDepartamentos,
-        ModificarEmpleados     = @ModificarEmpleados,
-        ModificarUsuarios      = @ModificarUsuarios,
-        AccesoTotal            = @AccesoTotal
+       VerUsuarios             = @VerUsuarios,
+       VerConexionBDD          = @VerConexionBDD,
+       VerReportes             = @VerReportes,
+       ModificarActivos        = @ModificarActivos,
+       ModificarMantenimientos = @ModificarMantenimientos,
+       ModificarEquipos        = @ModificarEquipos,
+       ModificarDepartamentos  = @ModificarDepartamentos,
+       ModificarEmpleados      = @ModificarEmpleados,
+       ModificarUsuarios       = @ModificarUsuarios,
+       AccesoTotal             = @AccesoTotal
 WHEN NOT MATCHED THEN
     INSERT (id_usuario, VerEmpleados, VerUsuarios, VerConexionBDD, VerReportes,
             ModificarActivos, ModificarMantenimientos, ModificarEquipos, ModificarDepartamentos,
@@ -366,10 +349,6 @@ WHEN NOT MATCHED THEN
             @ModificarActivos, @ModificarMantenimientos, @ModificarEquipos, @ModificarDepartamentos,
             @ModificarEmpleados, @ModificarUsuarios, @AccesoTotal);";
 
-                        var cmdPerm = new SqlCommand(qPerm, connection, tx);
-                        cmdPerm.Parameters.AddWithValue("@IdUsuario", Usuario.Id);
-
-                        // Si AccesoTotal = true, forzamos todos los demás a true
                         bool VerEmpleados = bits.AccesoTotal || bits.VerEmpleados;
                         bool VerUsuarios = bits.AccesoTotal || bits.VerUsuarios;
                         bool VerConexionBDD = bits.AccesoTotal || bits.VerConexionBDD;
@@ -381,6 +360,8 @@ WHEN NOT MATCHED THEN
                         bool ModificarEmpleados = bits.AccesoTotal || bits.ModificarEmpleados;
                         bool ModificarUsuarios = bits.AccesoTotal || bits.ModificarUsuarios;
 
+                        var cmdPerm = new SqlCommand(qPerm, connection, tx);
+                        cmdPerm.Parameters.AddWithValue("@IdUsuario", Usuario.Id);
                         cmdPerm.Parameters.AddWithValue("@VerEmpleados", VerEmpleados);
                         cmdPerm.Parameters.AddWithValue("@VerUsuarios", VerUsuarios);
                         cmdPerm.Parameters.AddWithValue("@VerConexionBDD", VerConexionBDD);
@@ -395,23 +376,35 @@ WHEN NOT MATCHED THEN
 
                         await cmdPerm.ExecuteNonQueryAsync();
 
-                        // invalidar caché por si acaso
                         _permisosService.Invalidate(Usuario.Id);
                     }
                     else
                     {
-                        // TODO (a futuro): si decides que al cambiar el rol también se reasignen permisos,
-                        // aquí podríamos repetir el bloque de cálculo y MERGE.
+                        var query = @"
+UPDATE Usuarios
+   SET Username = @Username,
+       id_rol_sistema = @IdRolSistema
+ WHERE id_usuario = @Id;";
+
+                        var command = new SqlCommand(query, connection, tx);
+                        command.Parameters.AddWithValue("@Username", Usuario.Username);
+                        command.Parameters.AddWithValue("@IdRolSistema", Usuario.IdRolSistema);
+                        command.Parameters.AddWithValue("@Id", Usuario.Id);
+
                         await command.ExecuteNonQueryAsync();
                     }
 
                     await tx.CommitAsync();
 
-                    // Bitácora crear/modificar
+                    // ====== Bitácora: registrar la acción ======
                     try
                     {
+                        var accion = esCreacion
+                            ? BitacoraConstantes.Acciones.Creacion
+                            : BitacoraConstantes.Acciones.Modificacion;
+
                         var detalles = esCreacion
-                            ? $"Se creó el usuario '{Usuario.Username}' (ID: {Usuario.Id}) con permisos por rol."
+                            ? $"Se creó el usuario '{Usuario.Username}' (ID: {Usuario.Id})."
                             : $"Se modificó el usuario '{Usuario.Username}' (ID: {Usuario.Id}).";
 
                         await BitacoraHelper.RegistrarAccionAsync(
@@ -419,24 +412,41 @@ WHEN NOT MATCHED THEN
                             _logger,
                             User,
                             BitacoraConstantes.Modulos.Usuarios,
-                            esCreacion ? BitacoraConstantes.Acciones.Creacion : BitacoraConstantes.Acciones.Modificacion,
+                            accion,
                             detalles
                         );
+
+                        _logger.LogInformation("Bitácora registrada: {Detalles}", detalles);
                     }
                     catch (Exception exBit)
                     {
                         _logger.LogError(exBit, "Error al registrar Bitácora de {Op} de usuario Id={Id}",
                             esCreacion ? "creación" : "modificación", Usuario.Id);
+                        // No bloquear por bitácora
                     }
 
-                    return RedirectToPage("./Index");
+                    TempData["Mensaje"] = esCreacion
+                        ? "¡Usuario creado correctamente!"
+                        : "¡Usuario actualizado correctamente!";
+
+                    return RedirectToPage("/Usuarios/Index");
                 }
+            }
+            catch (SqlException sqlex) when (sqlex.Number == 2627 || sqlex.Number == 2601)
+            {
+                // Índice único/duplicado (Username)
+                _logger.LogWarning(sqlex, "Username duplicado: '{Username}'", Usuario?.Username);
+                Modo = esCreacion ? "Crear" : "Editar";
+                ModelState.AddModelError(string.Empty, $"El nombre de usuario '{Usuario?.Username}' ya existe.");
+                await CargarDatosIniciales(esModoLectura: false);
+                return Page();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al guardar el usuario");
-                ModelState.AddModelError("", "Error al guardar: " + ex.Message);
-                await CargarDatosIniciales(false);
+                _logger.LogError(ex, "Error al guardar el usuario (Id={Id})", Usuario?.Id);
+                Modo = esCreacion ? "Crear" : "Editar";
+                ModelState.AddModelError(string.Empty, "Error al guardar: " + ex.Message);
+                await CargarDatosIniciales(esModoLectura: false);
                 return Page();
             }
         }
@@ -454,10 +464,8 @@ WHEN NOT MATCHED THEN
                  bool ModificarEmpleados, bool ModificarUsuarios, bool AccesoTotal)
             CalcularPermisosPorRol(string nombreRol)
         {
-            // Normalizamos el nombre para comparar
             var rol = (nombreRol ?? string.Empty).Trim().ToLowerInvariant();
 
-            // Defaults
             bool VerEmpleados = false, VerUsuarios = false, VerConexionBDD = false, VerReportes = false;
             bool ModificarActivos = false, ModificarMantenimientos = false, ModificarEquipos = false, ModificarDepartamentos = false;
             bool ModificarEmpleados = false, ModificarUsuarios = false, AccesoTotal = false;
@@ -465,11 +473,11 @@ WHEN NOT MATCHED THEN
             switch (rol)
             {
                 case "administrador":
-                    AccesoTotal = true; // forzará todo a true al guardar
+                    AccesoTotal = true;
                     break;
 
                 case "técnico":
-                case "tecnico": // por si no hay tilde en la BD
+                case "tecnico":
                     VerEmpleados = true;
                     VerUsuarios = true;
                     VerReportes = true;
@@ -490,7 +498,6 @@ WHEN NOT MATCHED THEN
                     break;
 
                 default:
-                    // Rol desconocido: sin permisos por defecto
                     break;
             }
 
@@ -505,14 +512,14 @@ WHEN NOT MATCHED THEN
 
             [Required(ErrorMessage = "El nombre de usuario es requerido")]
             [StringLength(50, ErrorMessage = "Máximo 50 caracteres")]
-            public string Username { get; set; }
+            public string Username { get; set; } = string.Empty;
 
             [StringLength(100, ErrorMessage = "Máximo 100 caracteres", MinimumLength = 6)]
             [DataType(DataType.Password)]
-            public string Password { get; set; }
+            public string? Password { get; set; }
 
             [DataType(DataType.Password)]
-            public string ConfirmPassword { get; set; }
+            public string? ConfirmPassword { get; set; }
 
             [Display(Name = "Empleado")]
             public int? IdEmpleado { get; set; }
@@ -524,6 +531,7 @@ WHEN NOT MATCHED THEN
             [Display(Name = "Último cambio de contraseña")]
             public DateTime FechaPassword { get; set; }
         }
+
 
         public class EmpleadoInfo
         {

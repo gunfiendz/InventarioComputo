@@ -16,7 +16,6 @@
     <div class="inventario-header">
         <h1 class="beige-text"><i class="fas fa-tools"></i> @ViewData["Title"]</h1>
 
-        @* Crear nuevo mantenimiento: requiere ModificarMantenimientos *@
         @if (canModMantenimientos)
         {
             <a href="/Mantenimientos/PruebaFormulario" class="btn btn-beige">
@@ -25,11 +24,11 @@
         }
     </div>
 
-    <div class="filtros-container beige-bg">
+    <form method="get" class="filtros-container beige-bg">
         <div class="filtros-group">
             <div class="filtro-item">
                 <label class="form-label beige-text">Tipo de Mantenimiento:</label>
-                <select id="filtro-tipo" class="form-select input-beige">
+                <select id="filtro-tipo" name="tipo" class="form-select input-beige">
                     <option value="">Todos</option>
                     @foreach (var tipo in Model.TiposMantenimiento)
                     {
@@ -40,7 +39,7 @@
 
             <div class="filtro-item">
                 <label class="form-label beige-text">Equipo:</label>
-                <select id="filtro-equipo" class="form-select input-beige">
+                <select id="filtro-equipo" name="equipo" class="form-select input-beige">
                     <option value="">Todos</option>
                     @foreach (var equipo in Model.Equipos)
                     {
@@ -51,7 +50,7 @@
 
             <div class="filtro-item">
                 <label class="form-label beige-text">Técnico:</label>
-                <select id="filtro-tecnico" class="form-select input-beige">
+                <select id="filtro-tecnico" name="tecnico" class="form-select input-beige">
                     <option value="">Todos</option>
                     @foreach (var empleado in Model.Empleados)
                     {
@@ -64,23 +63,29 @@
         <div class="filtros-group">
             <div class="filtro-item">
                 <label class="form-label beige-text">Fecha Inicio:</label>
-                <input type="date" id="filtro-fechainicio" class="form-control input-beige" value="@Model.FechaInicioFilter">
+                <input type="date" id="filtro-fechainicio" name="fechainicio" class="form-control input-beige" value="@Model.FechaInicioFilter">
             </div>
 
             <div class="filtro-item">
                 <label class="form-label beige-text">Fecha Fin:</label>
-                <input type="date" id="filtro-fechafin" class="form-control input-beige" value="@Model.FechaFinFilter">
+                <input type="date" id="filtro-fechafin" name="fechafin" class="form-control input-beige" value="@Model.FechaFinFilter">
             </div>
 
             <div class="filtro-item">
                 <label class="form-label beige-text">Buscar:</label>
-                <input type="text" id="filtro-busqueda" class="form-control input-beige" placeholder="Descripción..." value="@Model.BusquedaFilter">
+                <input type="text" id="filtro-busqueda" name="busqueda" class="form-control input-beige" placeholder="Descripción..." value="@Model.BusquedaFilter">
             </div>
         </div>
-        <button id="btn-aplicar-filtros" class="btn btn-beige-sm">
-            <i class="fas fa-filter"></i> Aplicar Filtros
-        </button>
-    </div>
+
+        <input type="hidden" name="sortColumn" value="@Model.SortColumn" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+        <input type="hidden" name="pagina" value="1" />
+
+        <div class="d-flex justify-content-end mt-2">
+            <a href="/Mantenimientos/Index" class="btn btn-cancelar me-2">Limpiar</a>
+            <button type="submit" class="btn btn-beige-sm"><i class="fas fa-filter"></i> Aplicar Filtros</button>
+        </div>
+    </form>
 
     <div class="table-responsive">
         <table class="table table-hover table-beige sortable-table">
@@ -164,7 +169,6 @@
                         <td>@mantenimiento.Descripcion</td>
                         <td>@mantenimiento.Tecnico</td>
                         <td class="acciones">
-                            @* Si puede modificar: Editar. Si no: Ver (solo lectura) *@
                             @if (canModMantenimientos)
                             {
                                 <a href="/Mantenimientos/PruebaFormulario/Editar/@mantenimiento.Id" class="btn btn-action" title="Editar">
@@ -178,7 +182,6 @@
                                 </a>
                             }
 
-                            @* Eliminar: solo AccesoTotal *@
                             @if (hasRoot)
                             {
                                 <button class="btn btn-action btn-eliminar"
@@ -246,64 +249,50 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Ordenamiento
-        document.querySelectorAll('.sort-link').forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                const column = this.closest('th').dataset.sortColumn;
-                const url = new URL(window.location.href);
-                const currentOrder = url.searchParams.get('sortDirection') || 'DESC';
-                const newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+        document.addEventListener('DOMContentLoaded', function () {
+            // Ordenamiento: usa el FORM GET (ajusta hidden inputs y envía)
+            const filtrosForm = document.querySelector('form.filtros-container');
+            document.querySelectorAll('.sort-link').forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const column = this.closest('th').dataset.sortColumn;
 
-                url.searchParams.set('sortColumn', column);
-                url.searchParams.set('sortDirection', newOrder);
-                url.searchParams.set('pagina', '1');
+                    const sortColInput = filtrosForm.querySelector('input[name="sortColumn"]');
+                    const sortDirInput = filtrosForm.querySelector('input[name="sortDirection"]');
+                    const paginaInput = filtrosForm.querySelector('input[name="pagina"]');
 
-                window.location.href = url.toString();
+                    const currentCol = sortColInput.value || 'Fecha';
+                    const currentDir = (sortDirInput.value || 'DESC').toUpperCase();
+                    const newDir = (currentCol === column && currentDir === 'ASC') ? 'DESC' : 'ASC';
+
+                    sortColInput.value = column;
+                    sortDirInput.value = newDir;
+                    paginaInput.value = '1';
+
+                    filtrosForm.submit();
+                });
             });
-        });
 
-        // Filtros
-        document.getElementById('btn-aplicar-filtros').addEventListener('click', function () {
-            const tipo = document.getElementById('filtro-tipo').value;
-            const equipo = document.getElementById('filtro-equipo').value;
-            const tecnico = document.getElementById('filtro-tecnico').value;
-            const fechaInicio = document.getElementById('filtro-fechainicio').value;
-            const fechaFin = document.getElementById('filtro-fechafin').value;
-            const busqueda = document.getElementById('filtro-busqueda').value;
-
-            const url = new URL(window.location.href);
-            url.searchParams.set('pagina', '1');
-
-            url.searchParams.set('tipo', tipo);
-            url.searchParams.set('equipo', equipo);
-            url.searchParams.set('tecnico', tecnico);
-            url.searchParams.set('fechainicio', fechaInicio);
-            url.searchParams.set('fechafin', fechaFin);
-            url.searchParams.set('busqueda', busqueda);
-
-            window.location.href = url.toString();
-        });
-
-        // Eliminar
-        let idMantenimientoAEliminar = null;
-        document.querySelectorAll('.btn-eliminar').forEach(btn => {
-            btn.addEventListener('click', function () {
-                idMantenimientoAEliminar = this.getAttribute('data-id');
-                const descripcion = this.getAttribute('data-descripcion');
-                document.getElementById('descripcionMantenimientoEliminar').textContent = descripcion;
-                const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
-                modal.show();
+            // Eliminar
+            let idMantenimientoAEliminar = null;
+            document.querySelectorAll('.btn-eliminar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    idMantenimientoAEliminar = this.getAttribute('data-id');
+                    const descripcion = this.getAttribute('data-descripcion');
+                    document.getElementById('descripcionMantenimientoEliminar').textContent = descripcion;
+                    const modal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+                    modal.show();
+                });
             });
-        });
 
-        document.getElementById('formEliminar').addEventListener('submit', function (e) {
-            if (idMantenimientoAEliminar) {
-                this.querySelector('#idMantenimientoAEliminar').value = idMantenimientoAEliminar;
-            } else {
-                e.preventDefault();
-                alert('Error: No se ha seleccionado un mantenimiento para eliminar.');
-            }
+            document.getElementById('formEliminar').addEventListener('submit', function (e) {
+                if (idMantenimientoAEliminar) {
+                    this.querySelector('#idMantenimientoAEliminar').value = idMantenimientoAEliminar;
+                } else {
+                    e.preventDefault();
+                    alert('Error: No se ha seleccionado un mantenimiento para eliminar.');
+                }
+            });
         });
     </script>
 }
